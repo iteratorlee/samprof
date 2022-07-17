@@ -1,0 +1,47 @@
+{
+    "14": "smsp__pcsamp_warps_issue_stalled_long_scoreboard",
+    "34": "smsp__pcsamp_warps_issue_stalled_tex_throttle",
+    "35": "smsp__pcsamp_warps_issue_stalled_tex_throttle_not_issued",
+    "19": "smsp__pcsamp_warps_issue_stalled_membar_not_issued",
+    "23": "smsp__pcsamp_warps_issue_stalled_misc_not_issued",
+
+    "24": "smsp__pcsamp_warps_issue_stalled_no_instructions",
+    "36": "smsp__pcsamp_warps_issue_stalled_wait",
+    "12": "smsp__pcsamp_warps_issue_stalled_lg_throttle",
+    "15": "smsp__pcsamp_warps_issue_stalled_long_scoreboard_not_issued",
+    "11": "smsp__pcsamp_warps_issue_stalled_imc_miss_not_issued",
+
+    "8": "smsp__pcsamp_warps_issue_stalled_drain",
+    "7": "smsp__pcsamp_warps_issue_stalled_dispatch_stall_not_issued",
+    "6": "smsp__pcsamp_warps_issue_stalled_dispatch_stall",
+    "33": "smsp__pcsamp_warps_issue_stalled_sleeping_not_issued",
+    "25": "smsp__pcsamp_warps_issue_stalled_no_instructions_not_issued",
+
+    "10": "smsp__pcsamp_warps_issue_stalled_imc_miss",
+    "0": "smsp__pcsamp_sample_count",
+    "21": "smsp__pcsamp_warps_issue_stalled_mio_throttle_not_issued",
+    "3": "smsp__pcsamp_warps_issue_stalled_barrier_not_issued",
+    "13": "smsp__pcsamp_warps_issue_stalled_lg_throttle_not_issued",
+
+    "1": "smsp__pcsamp_samples_data_dropped",
+    "4": "smsp__pcsamp_warps_issue_stalled_branch_resolving",
+    "5": "smsp__pcsamp_warps_issue_stalled_branch_resolving_not_issued",
+    "9": "smsp__pcsamp_warps_issue_stalled_drain_not_issued",
+    "16": "smsp__pcsamp_warps_issue_stalled_math_pipe_throttle",
+
+    "17": "smsp__pcsamp_warps_issue_stalled_math_pipe_throttle_not_issued",
+    "31": "smsp__pcsamp_warps_issue_stalled_short_scoreboard_not_issued",
+    "18": "smsp__pcsamp_warps_issue_stalled_membar",
+    "20": "smsp__pcsamp_warps_issue_stalled_mio_throttle",
+    "22": "smsp__pcsamp_warps_issue_stalled_misc",
+
+    "29": "smsp__pcsamp_warps_issue_stalled_selected_not_issued",
+    "26": "smsp__pcsamp_warps_issue_stalled_not_selected",
+    "27": "smsp__pcsamp_warps_issue_stalled_not_selected_not_issued",
+    "37": "smsp__pcsamp_warps_issue_stalled_wait_not_issued",
+    "28": "smsp__pcsamp_warps_issue_stalled_selected",
+
+    "30": "smsp__pcsamp_warps_issue_stalled_short_scoreboard",
+    "2": "smsp__pcsamp_warps_issue_stalled_barrier",
+    "32": "smsp__pcsamp_warps_issue_stalled_sleeping"
+}
