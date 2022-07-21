@@ -1,0 +1,1394 @@
+diff --git a/.gitignore b/.gitignore
+index 8644b4d..89162e7 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -26,7 +26,6 @@ profiler_debug
+ /.ipynb_checkpoints/
+ 
+ *.S
+-*.sh
+ *.gz
+ *.pt
+ *.tar
+diff --git a/Makefile b/Makefile
+index ab16d06..c2e0dcc 100644
+--- a/Makefile
++++ b/Makefile
+@@ -55,10 +55,10 @@ endif
+ 
+ all: gpu_profiler
+ 
+-gpu_profiler: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
++gpu_profiler: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp cpu_sampler.cpp
+ 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o $(LIBNAMEV2) -shared $^ $(LIBS) $(LDFLAGS)
+ 
+-gpu_profiler_debug: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
++gpu_profiler_debug: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp cpu_sampler.cpp
+ 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o profiler_debug $^ $(LIBS) $(LDFLAGS)
+ 
+ gpu_profiler_wo_rpc: gpu_profiler_wo_rpc.cpp
+@@ -76,8 +76,8 @@ client_cpp: tools/client.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.g
+ cubin_tool: tools/cubin_tool.cpp tools/get_cubin_crc.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
+ 	$(NVCC) -g -std=c++11 $^ -o $@ $(LIBS) $(LDFLAGS)
+ 
+-test: test.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp back_tracer.cpp
+-	$(NVCC) -g -std=c++11 $^ -o $@ $(LIBS) $(LDFLAGS)
++test: test.cpp common.cpp back_tracer.cpp cpu_sampler.cpp
++	$(NVCC) -forward-unknown-to-host-compiler -rdynamic -g -std=c++11 $^ -o $@ $(LIBS)
+ 
+ .PRECIOUS: $(GRPC_CPP_GEN_PATH)/%.pb.cc
+ cpp-gen/%.pb.cc: %.proto
+diff --git a/README.md b/README.md
+index d9d4a63..2142d16 100644
+--- a/README.md
++++ b/README.md
+@@ -1,26 +1,79 @@
+ Application-oblivious GPU profiler for CUDA applications.
+ 
+-## Dependency
++## 1. Dependency
+ ```
+-CUDA(CUPTI)=11.6, grpc & protobuf, libunwind
++CUDA(CUPTI)=11.6, grpc & protobuf, libunwind8-dev, libpython3.8-dev
+ ```
+-
+-## Build
++### 1.1 Install grpc & protobuf from source
++Please refer to [gRPC-C++ Quick Start](https://grpc.io/docs/languages/cpp/quickstart/)
++### 1.2 Install libunwind
++```bash
++apt install libunwind8-dev
+ ```
+-make
++### 1.3 Configuring
++```bash
++# Make sure CUDA lib path and grpc lib path have been appended to LD_LIBRARY_PATH
++export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/cuda/lib64:/path/to/grpc/lib
++# Make sure /path/to/Python.h has been appended to CPLUS_INCLUDE_PATH
++# If you could not find Python.h, consider installing libpython3.8-dev
++export CPLUS_INCLUDE_PATH=$LD_LIBRARY_PATH:/path/to/grpc/include:/usr/include/python3.8
++export PKG_CONFIG_PATH=/path/to/grpc/lib/pkgconfig
+ ```
+ 
+-## Usage
++## 2. Build
++```bash
++# Build the default version of Samprof, the output would be libgpu_profiler_v2.so
++make
+ ```
+-export CUDA_INJECTION64_PATH=/path/to/libgpu_profiler.so
++
++## 3. Usage
++
++Samprof-defined environment variables are listed in the following table:
++
++| Name | Type | Description | Default |
++| :--- | :--- | :--- | :--- |
++| `CUDA_INJECTION64_PATH` | string | Path to `libgpu_profiler_\<version>.so` | explicitly set by user |
++| `DL_BACKEND` | string | **TORCH**: Pytorch <br> **TF**: Tensorflow | TORCH |
++| `NO_SAMPLING` | bool | **0[DEV]**: profiling based on pc sampling, the hybrid CCT could be inaccurate, and remote profiling could be stuck due to CUPTI internal bugs <br> **1**: profiling based on tracing instead of pc sampling, binding timers around CUDA API calls to record CUDA kernels | **0** |
++| `NO_RPC` | bool | **0**: starting a standby rpc server, remote profiling request could be issued using client <br> **1**: profiling the application for the whole life-cycle and saving the profiling results to `DUMP_FN` | **0** |
++| `DUMP_FN` | string | the path of the file to save the profiling results, only work when `NO_RPC` is set to **1** | |
++| `CHECK_RSP` | bool | **0**: not checking the *%rsp* register before call stack unwinding, the CPU CCT is guaranteed to be accurate <br> **1**: checking the *%rsp* register before call stack unwinding, the CPU CCT could be inaccurate, while the overhead could be reduced significantly | **1** |
++| `PRUNE_CCT` | bool | **0**: returning the complete CCT <br> **1**: returning trimmed CCT pruned by Samprof-defined rules | 1 |
++| `BT_VERBOSE` | bool | **0**: not printing the detailed call path upon call stack unwinding <br> **1**: printing the detailed call path upon call stack unwinding | **0** |
++
++We provide a helper script `run.sh`. Configure the environments according to your needs. Then running `bash run.sh` would work.
++
++If `NO_RPC` is set to **0**, a profiler RPC server would be started at `0.0.0.0:8886` by default. An RPC client is provided in the `bins` directory. Running `./gpu_profiler_client --duration 2000` would issue a two seconds profiling request to `localhost:8886` and perform analysis on the response.
++
++If `NO_RPC` is set to **1**, the profiling result would be dumped to an intermediate file (indicated by `DUMP_FN`). In this case, running `./gpu_profiler_client --pbfn $DUMP_FN` for further analysis.
++
++After running the client successfully, the analysis results would be saved in `profiler.pb.gz`. Running `pprof -http=0.0.0.0:<port> --trim=false --call_tree ./profiler.pb.gz` would start a pprof web server at `0.0.0.0:<port>` which you can visit via a web browser. In case that the call graph is too large, your could run `pprof -pdf --trim=false --call_tree ./profiler.pb.gz >> profile.pdf` to save the call graph to a pdf file.
++
++If you want to customize the parameters, just run `./gpu_profiler_client -h` for the help information.
++
++## 4. Tools
++
++### 4.1 C++ RPC Client
++```bash
++# Build the C++ RPC Client
++make client_cpp
++# Issue a profiling request
++./client_cpp <ip>:<port> <duration>
+ ```
+-Then, just run your application as usual.
++The C++ RPC client would not analyze the profiling results and generate pprof format profiles. It simply prints the RPC response. Consider use it for debugging.
+ 
+-The PC sampling RPC server is started at `0.0.0.0:50051` by default. An RPC client is provided to for testing usage. Running `make client` would generate the client.
++### 4.2 Cubin Extraction (Offline Mode)
++In the offline mode, Samprof extracts all the loaded modules to cubin files at runtime. The extracted cubin file would be saved as `<moduleId>.cubin`. Setting the `OFFLINE` macro to 1 would enable the offline mode.
++```cpp
++// gpu_profiler.cpp line 842
++#define OFFLINE 1
++```
+ 
+-## Features
++### 4.3 Static Cubin Analysis
++```bash
++# Build the cubin analyzer
++make cubin_tool
++```
++`cubin_tool` analyzes the calling relations between CUDA functions via analyzing the assembly code of cubins. Running `./cubin_tool <cubin path> <cubin call graph path>` would analyze all the cubin files in `<cubin path>` and save the analysis results to `<cubin call graph path>`. Call graph files are named as `<cubin crc>.pb.gz`. The proto of CUDA call graph is defined in [gpu_profiling.proto](https://code.byted.org/inf/gpu_profiler/blob/master/protos/gpu_profiling.proto).
+ 
+-| Feature | Intro | Status |
+-| :---- | :---- | :---- |
+-| GPU PC sampling | The profiler would start PC sampling upon receiving <br> a request from the rpc client | WIP |
+-| Hybrid (CPU & GPU) <br> calling context tree <br> (CCT) reconstruction | The profiler maintains a CPU calling context tree via <br> event-based CPU call stack unwinding. The GPU PC <br> samples are inserted as leaf nodes of the tree. Once <br> sent back to the client, the hybrid CCT would be re-<br>constructed using a dedicated algorithm. | WIP |
+\ No newline at end of file
++Via setting the `PRINTGRAPH` macro to `true`, you could print all the call graph files by running `./cubin_tool <cubin call graph path>`
+\ No newline at end of file
+diff --git a/back_tracer.h b/back_tracer.h
+index 4bb274c..5e440c2 100644
+--- a/back_tracer.h
++++ b/back_tracer.h
+@@ -38,7 +38,7 @@ typedef enum {
+ static inline void PrintUNWValue(UNWValue& val) {
+     pid_t pid = gettid();
+     pthread_t tid = pthread_self();
+-    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lu:[%s+%lu]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
++    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lx:[%s+%lx]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
+ }
+ 
+ static const char* PyObj2Str(PyObject* obj) {
+diff --git a/bins/gpu_profiler_client b/bins/gpu_profiler_client
+new file mode 100755
+index 0000000..f201695
+Binary files /dev/null and b/bins/gpu_profiler_client differ
+diff --git a/calling_ctx_tree.h b/calling_ctx_tree.h
+index c06dd86..6c7e68d 100644
+--- a/calling_ctx_tree.h
++++ b/calling_ctx_tree.h
+@@ -117,7 +117,7 @@ public:
+ typedef std::unordered_map<pthread_t, CPUCCT*> CCTMAP_t;
+ 
+ static bool HasExcludePatterns(std::string funcName) {
+-	std::vector<std::string> excludePatterns = {"cupti", "CUpti", "cuTexRefGetArray"};
++	std::vector<std::string> excludePatterns = {"cupti", "CUpti", "cuTexRefGetArray", "GenCallStack"};
+ 	for (auto pattern: excludePatterns) {
+ 		if(funcName.find(pattern) != std::string::npos) {
+ 			return true;
+@@ -125,4 +125,4 @@ static bool HasExcludePatterns(std::string funcName) {
+ 	}
+ 	return false;
+ }
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/common.h b/common.h
+index d54a0db..c4d7069 100644
+--- a/common.h
++++ b/common.h
+@@ -24,6 +24,8 @@
+ #define DEBUG true
+ #define DEBUG_LOG_LENGTH 4096
+ 
++#define min2(a, b) ((a) < (b) ? (a) : (b))
++
+ #define DEBUG_LOG(format, args...)                                          \
+ do {                                                                        \
+     if (DEBUG) {                                                            \
+@@ -86,8 +88,10 @@ public:
+     size_t circularbufSize = 500;
+ 
+     // cpu sampling configurations
+-    uint64_t cpuSamplingPeriod;
+-    uint64_t cpuSamplingPages;
++    uint64_t cpuSamplingPeriod = 1000;
++    uint64_t cpuSamplingPages = 128;
++    int32_t cpuSamplingTimeout = -1;
++    uint64_t cpuSamplingMaxDepth = 256;
+ 
+     // event-driven cpu cct contruction configurations
+     bool fakeBT = false;
+@@ -109,15 +113,35 @@ public:
+     void PrintProfilerConf() {
+         std::cout << std::endl;
+         std::cout << "============ Configuration Details : ============" << std::endl;
++        std::cout << "gpu pc sampling period       : " << samplingPeriod << std::endl;
++        std::cout << "scratch buffer size          : " << scratchBufSize << std::endl;
++        std::cout << "hw buffer size               : " << hwBufSize << std::endl;
+         std::cout << "configuration buffer size    : " << pcConfigBufRecordCount << std::endl;
+         std::cout << "circular buffer count        : " << circularbufCount << std::endl;
+         std::cout << "circular buffer record count : " << circularbufSize << std::endl;
++
++        std::cout << "cpu pc sampling period       : " << cpuSamplingPeriod << std::endl;
++        std::cout << "cpu pc sampling buffer pages : " << cpuSamplingPages << std::endl;
++        std::cout << "cpu pc sampling timeout      : " << cpuSamplingTimeout << std::endl;
++        std::cout << "cpu pc sampling max depth    : " << cpuSamplingMaxDepth << std::endl;
++
++        std::cout << "fake CCT                     : " << fakeBT << std::endl;
++        std::cout << "do CPU call stack unwinding  : " << doCPUCallStackUnwinding << std::endl;
+         std::cout << "check rsp                    : " << checkRSP << std::endl;
+-        std::cout << "dl backend                   : " << backEnd << std::endl;
+         std::cout << "prune cct                    : " << pruneCCT << std::endl;
+         std::cout << "sync before start/stop       : " << syncBeforeStart << std::endl;
+         std::cout << "backtrace verbose            : " << backTraceVerbose << std::endl;
+         std::cout << "do py unwinding              : " << doPyUnwinding << std::endl;
++        std::cout << "no RPC                       : " << noRPC << std::endl;
++        std::cout << "no Sampling                  : " << noSampling << std::endl;
++
++        std::cout << "dl backend                   : " << backEnd << std::endl;
++        std::cout << "python file name             : " << pyFileName << std::endl;
++        if (noRPC) {
++            std::cout << "dump file name (no)          : " << dumpFileName << std::endl;
++        }
++
++        std::cout << "main thread tid              : " << mainThreadTid << std::endl;
+         std::cout << "=================================================" << std::endl;
+         std::cout << std::endl;
+     }
+@@ -170,7 +194,7 @@ private:
+         }
+         if (backEnd == "TORCH") {
+             // TODO: how to decide py unwinding?
+-            // doPyUnwinding = true;
++            doPyUnwinding = true;
+         }
+         if ((s = getenv("NO_RPC")) != nullptr) {
+             noRPC = std::strtol(s, nullptr, 10);
+@@ -187,6 +211,12 @@ private:
+         if ((s = getenv("CPU_SAMPLING_BUFFER_PAGES")) != nullptr) {
+             cpuSamplingPages = std::strtoul(s, nullptr, 10);
+         }
++        if ((s = getenv("CPU_SAMPLING_TIMEOUT")) != nullptr) {
++            cpuSamplingTimeout = std::strtol(s, nullptr, 10);
++        }
++        if ((s = getenv("CPU_SAMPLING_MAX_DEPTH")) != nullptr) {
++            cpuSamplingMaxDepth = std::strtoul(s, nullptr, 10);
++        }
+     }
+ };
+ 
+diff --git a/cpu_sampler.cpp b/cpu_sampler.cpp
+index aad568b..3fe5bae 100644
+--- a/cpu_sampler.cpp
++++ b/cpu_sampler.cpp
+@@ -1,5 +1,32 @@
++#include <dlfcn.h>
++#include <execinfo.h>
++
++#include "utils.h"
+ #include "cpu_sampler.h"
+ 
++static std::vector<std::string> GetCallStackSymbols(const uint64_t* stack, uint64_t depth) {
++    void* stackPointers[depth];
++    char **symbols;
++    std::vector<std::string> ret;
++
++    for (int i = 0; i < depth; ++i) {
++        stackPointers[i] = (void *)stack[i];
++    }
++    symbols = backtrace_symbols(stackPointers, depth);
++
++    if (symbols) {
++        for (int i = 0; i < depth; ++i) {
++            ret.push_back(
++                ParseBTSymbol(std::string(symbols[i]))
++            );
++            //free(symbols[i]);
++        }
++    }
++    free(symbols);
++
++    return ret;
++}
++
+ static int perf_event_open(struct perf_event_attr* attr,
+     pid_t pid, int cpu, int group_fd, uint64_t flags) {
+     return syscall(__NR_perf_event_open, attr, pid, cpu, group_fd, flags);
+@@ -52,17 +79,115 @@ void CPUCallStackSampler::DisableSampling() {
+ }
+ 
+ int CPUCallStackSampler::CollectData(int32_t timeout, uint64_t maxDepth,
+-    struct CallStack* callStack) {
+-    if (callStack == 0) {
+-        throw std::runtime_error("arg <callStack> is null");
+-    }
+-
++    struct CallStack& callStack) {
+     struct pollfd pfd;
+     pfd.fd = fd;
+     pfd.events = POLLIN;
+ 
+-    //TODO collect sample data
+-    //TODO update cpu cct
++    uint64_t start = Timer::GetMilliSeconds();
++    while (true) {
++        uint64_t now = Timer::GetMilliSeconds();
++        int32_t toWait;
++        if (timeout < 0) {
++            toWait = -1;
++        } else {
++            toWait = timeout - (int32_t)(now - start);
++            if (toWait < 0) {
++                // timeout
++                return -1;
++            }
++        }
++
++        int ret = poll(&pfd, 1, toWait);
++        if (ret == 0) {
++            return -1;
++        } else if (ret == -1) {
++            return errno;
++        }
++
++        struct sample {
++            struct perf_event_header header;
++            uint32_t pid, tid;
++            uint64_t time;
++            uint64_t nr;
++            uint64_t pcs[0];
++        }* sample = (struct sample*)((uint8_t*)mem + 4096 + offset);
++
++        struct perf_event_mmap_page* info = (struct perf_event_mmap_page*)mem;
++        offset = info->data_head % (pages * 4096);
++        if (sample->header.type != PERF_RECORD_SAMPLE) {
++            continue;
++        }
++
++        callStack.time = sample->time;
++        callStack.pid = sample->pid;
++        callStack.tid = sample->tid;
++        callStack.depth = min2(maxDepth, sample->nr);
++        callStack.pcs = sample->pcs;
++        callStack.fnames = GetCallStackSymbols(callStack.pcs, callStack.depth);
++
++        return 0;
++    }
++}
++
++CPUCallStackSamplerCollection::~CPUCallStackSamplerCollection() {
++    for (auto itr: samplers) {
++        delete itr.second;
++    }
++}
++
++void CPUCallStackSamplerCollection::RegisterSampler(pid_t pid) {
++    if (samplers.find(pid) == samplers.end()) {
++        auto sampler = GetCPUCallStackSampler(pid);
++        samplers.insert(std::make_pair(pid, sampler));
++    }
++}
++
++void CPUCallStackSamplerCollection::DeleteSampler(pid_t pid) {
++    auto itr = samplers.find(pid);
++    if (itr != samplers.end()) {
++        delete itr->second;
++        samplers.erase(pid);
++    }
++    else {
++        DEBUG_LOG("sampler %d does not exist\n", pid);
++    }
++}
++
++void CPUCallStackSamplerCollection::EnableSampling() {
++    for (auto itr: samplers) {
++        itr.second->EnableSampling();
++    }
++    running = true;
++}
++
++void CPUCallStackSamplerCollection::DisableSampling() {
++    for (auto itr: samplers) {
++        itr.second->DisableSampling();
++    }
++    running = false;
++}
++
++bool CPUCallStackSamplerCollection::IsRunning() {
++    return running;
++}
++
++std::unordered_map<pid_t, CPUCallStackSampler::CallStack>
++CPUCallStackSamplerCollection::CollectData() {
++    std::unordered_map<pid_t, CPUCallStackSampler::CallStack> ret;
++    for (auto itr: samplers) {
++        CPUCallStackSampler::CallStack callStack;
++        itr.second->CollectData(
++            GetProfilerConf()->cpuSamplingTimeout,
++            GetProfilerConf()->cpuSamplingMaxDepth,
++            callStack
++        );
++        ret.insert(
++            std::make_pair(itr.first, callStack)
++        );
++    }
++
++    return ret;
+ }
+ 
+ CPUCallStackSampler* GetCPUCallStackSampler(pid_t pid) {
+diff --git a/cpu_sampler.h b/cpu_sampler.h
+index 8d34bc8..f1ca199 100644
+--- a/cpu_sampler.h
++++ b/cpu_sampler.h
+@@ -3,6 +3,7 @@
+ #include <poll.h>
+ #include <unistd.h>
+ #include <memory.h>
++#include <cxxabi.h>
+ #include <sys/mman.h>
+ #include <sys/ioctl.h>
+ #include <sys/syscall.h>
+@@ -19,6 +20,7 @@ public:
+         uint32_t pid, tid;
+         uint64_t depth;
+         const uint64_t *pcs;
++        std::vector<std::string> fnames;
+     };
+ 
+     CPUCallStackSampler(const CPUCallStackSampler&) = delete;
+@@ -30,7 +32,7 @@ public:
+     void EnableSampling();
+     void DisableSampling();
+ 
+-    int CollectData(int32_t timeout, uint64_t maxDepth, struct CallStack* callStack);
++    int CollectData(int32_t timeout, uint64_t maxDepth, struct CallStack& callStack);
+ 
+     explicit CPUCallStackSampler(pid_t pid, uint64_t period, uint64_t pages);
+ 
+@@ -43,4 +45,43 @@ private:
+ 
+ CPUCallStackSampler* GetCPUCallStackSampler(pid_t pid);
+ 
++class CPUCallStackSamplerCollection {
++public:
++    CPUCallStackSamplerCollection() {};
++    CPUCallStackSamplerCollection(const CPUCallStackSamplerCollection&) = delete;
++    CPUCallStackSamplerCollection& operator=(const CPUCallStackSamplerCollection) = delete;
++
++    ~CPUCallStackSamplerCollection();
++
++    void RegisterSampler(pid_t pid);
++    void DeleteSampler(pid_t pid);
++    void EnableSampling();
++    void DisableSampling();
++    bool IsRunning();
++
++    std::unordered_map<pid_t, CPUCallStackSampler::CallStack> CollectData();
++private:
++    std::unordered_map<pid_t, CPUCallStackSampler*> samplers;
++    bool running;
++};
++
++static std::string ParseBTSymbol(std::string rawStr) {
++    std::string s;
++    if (rawStr.length() && rawStr[0] != '[') {
++        auto pos1 = rawStr.find('(');
++        auto pos2 = rawStr.find('+');
++        if (pos2 - pos1 > 1) {
++            auto rawFuncName = rawStr.substr(pos1 + 1, pos2 - pos1 - 1);
++            char* realFuncName;
++            int status = 99;
++            if ((realFuncName = abi::__cxa_demangle(rawFuncName.c_str(), nullptr, nullptr, &status)) != 0) {
++                s = std::string(realFuncName);
++            } else {
++                s = rawFuncName;
++            }
++        }
++    }
++    return s;
++}
++
+ #endif
+diff --git a/gpu_profiler.cpp b/gpu_profiler.cpp
+index dc84a3d..752287d 100644
+--- a/gpu_profiler.cpp
++++ b/gpu_profiler.cpp
+@@ -43,65 +43,10 @@
+ 
+ #include "gpu_profiler.h"
+ 
+-static void InitCUptiSettings() {
+-    char* s;
+-    if ((s = getenv("CUPTI_SAMPLING_PERIOD")) != nullptr) {
+-        g_samplingPeriod = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("CUPTI_BUF_SIZE")) != nullptr) {
+-        g_scratchBufSize = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("CUPTI_HWBUF_SIZE")) != nullptr) {
+-        g_hwBufSize = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("CUPTI_PC_CONFIG_BUF_RECORD_COUNT")) != nullptr) {
+-        g_pcConfigBufRecordCount = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("CUPTI_CIRCULAR_BUF_COUNT")) != nullptr) {
+-        g_circularbufCount = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("CUPTI_CIRCULAR_BUF_SIZE")) != nullptr) {
+-        g_circularbufSize = std::strtoul(s, nullptr, 10);
+-    }
+-    if ((s = getenv("RETURN_CUDA_PC_SAMPLE_ONLY")) != nullptr) {
+-        g_fakeBT = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("DO_CPU_CALL_STACK_UNWINDING")) != nullptr) {
+-        g_DoCPUCallstackUnwinding = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("PRUNE_CCT")) != nullptr) {
+-        g_pruneCCT = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("DL_BACKEND")) != nullptr) {
+-        g_backEnd = s;
+-    }
+-    if ((s = getenv("CHECK_RSP")) != nullptr) {
+-        g_checkRSP = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("SYNC_BEFORE_START")) != nullptr) {
+-        g_syncBeforeStart = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("BT_VERBOSE")) != nullptr) {
+-        g_backTraceVerbose = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("PY_FILENAME")) != nullptr) {
+-        g_pyFileName = s;
+-    }
+-    if ((s = getenv("NO_RPC")) != nullptr) {
+-        g_noRPC = std::strtol(s, nullptr, 10);
+-    }
+-    if ((s = getenv("DUMP_FN")) != nullptr) {
+-        g_dumpFileName = s;
+-    }
+-    if ((s = getenv("NO_SAMPLING")) != nullptr) {
+-        g_noSampling = std::strtol(s, nullptr, 10);
+-    }
+-}
+-
+ static inline void PrintUNWValue(UNWValue& val) {
+     pid_t pid = gettid();
+     pthread_t tid = pthread_self();
+-    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lu:[%s+%lu]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
++    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lx:[%s+%lx]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
+ }
+ 
+ static const char* PyObj2Str(PyObject* obj) {
+@@ -161,7 +106,7 @@ static CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose=false)
+     #endif
+     std::queue<UNWValue> pyFrameQueue;
+     CallStackStatus status;
+-    if (g_backEnd == "TORCH") pyBackTrace(pyFrameQueue);
++    if (GetProfilerConf()->backEnd == "TORCH") pyBackTrace(pyFrameQueue);
+     if (pyFrameQueue.size()) status = CALL_STACK_HAS_PY;
+     else status = CALL_STACK_NOT_HAS_PY;
+ 
+@@ -189,7 +134,7 @@ static CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose=false)
+         // skip cupti-related stack frames
+         if (HasExcludePatterns(outer_name)) continue;
+ 
+-        if (g_backEnd == "TORCH" && std::string(outer_name).find("_PyEval_EvalFrameDefault") != std::string::npos) {
++        if (GetProfilerConf()->backEnd == "TORCH" && std::string(outer_name).find("_PyEval_EvalFrameDefault") != std::string::npos) {
+             UNWValue value = pyFrameQueue.front();
+             value.pc = pc + value.offset; // use native pc plus offset as PyFrame pc
+             q.push(value);
+@@ -235,7 +180,7 @@ static void DoBackTrace(bool verbose=false) {
+         ++g_CPUCCTNodeId;
+         g_CPUCCTNodeIdMutex.unlock();
+ 
+-        vRootNode->funcName = "root_" + std::to_string(vRootNode->id);
++        vRootNode->funcName = "thread:" + std::to_string(gettid()) + "::id:" + std::to_string(vRootNode->id);
+         vRootNode->pc = 0;
+         vRootNode->offset = 0;
+         vRootNode->nodeType = CCTNODE_TYPE_CXX;
+@@ -246,8 +191,8 @@ static void DoBackTrace(bool verbose=false) {
+ 
+     CPUCCT* cpuCCT = g_CPUCCTMap[tid];
+ 
+-    // if g_fakeBT is true, do not perform cpu call stack unwinding
+-    if (g_fakeBT) {
++    // if GetProfilerConf()->fakeBT is true, do not perform cpu call stack unwinding
++    if (GetProfilerConf()->fakeBT) {
+         g_activeCPUPCIDMutex.lock();
+         if (verbose) DEBUG_LOG("active pc changed to %lu:%p\n", cpuCCT->root->id, (void *)(cpuCCT->root->pc));
+         g_activeCPUPCID = cpuCCT->root->id;
+@@ -259,7 +204,7 @@ static void DoBackTrace(bool verbose=false) {
+     uint64_t rsp;
+     getRSP(&rsp);
+     if (verbose) DEBUG_LOG("rsp=%p\n", (void *)rsp);
+-    if (g_checkRSP && g_esp2pcIdMap.find(rsp) != g_esp2pcIdMap.end()) {
++    if (GetProfilerConf()->checkRSP && g_esp2pcIdMap.find(rsp) != g_esp2pcIdMap.end()) {
+         uint64_t pcId = g_esp2pcIdMap[rsp];
+         g_activeCPUPCIDMutex.lock();
+         g_activeCPUPCID = pcId;
+@@ -276,10 +221,10 @@ static void DoBackTrace(bool verbose=false) {
+ 
+     // if the backend is Pytorch, and current thread has not PyFrame
+     // go to the main thread for PyFrame
+-    if (g_backEnd == "TORCH" && status == CALL_STACK_NOT_HAS_PY) {
++    if (GetProfilerConf()->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
+         DEBUG_LOG("this thread has not PyFrame, going to the main thread\n");
+         g_genCallStack = true;
+-        pthread_kill(g_mainThreadTid, SIGUSR1);
++        pthread_kill(GetProfilerConf()->mainThreadTid, SIGUSR1);
+         while (g_genCallStack);
+         toInsertUNWMain = g_callStack;
+         // TODO: clear the stack or not ?
+@@ -374,7 +319,7 @@ static CriticalNodeType IsCriticalNode(CPUCCTNode* node) {
+                 DEBUG_LOG("critical node, kind=backward, funcName=%s, id=%lu\n", node->funcName.c_str(), node->id);
+                 return CRITICAL_TYPE_PY_BACKWARD;
+             }
+-            if (node->funcName.find(g_pyFileName) != std::string::npos && node->funcName.find("loss") != std::string::npos) {
++            if (node->funcName.find(GetProfilerConf()->pyFileName) != std::string::npos && node->funcName.find("loss") != std::string::npos) {
+                 DEBUG_LOG("critical node, kind=loss, funcName=%s, id=%lu\n", node->funcName.c_str(), node->id);
+                 return CRITICAL_TYPE_PY_LOSS;
+             }
+@@ -449,7 +394,7 @@ static void PruneCPUCCT(CCTMAP_t& cctMap) {
+ 
+ static void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
+     CCTMAP_t PrunedCPUCCTMap;
+-    if (g_pruneCCT) PruneCPUCCT(PrunedCPUCCTMap);
++    if (GetProfilerConf()->pruneCCT) PruneCPUCCT(PrunedCPUCCTMap);
+     else PrunedCPUCCTMap = g_CPUCCTMap;
+     for (auto itr: PrunedCPUCCTMap) {
+         CPUCCT *cct = itr.second;
+@@ -497,7 +442,7 @@ static void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSampling
+     pPcSamplingData = &g_circularBuffer[g_put];
+ 
+     g_bufferEmptyTrackerArray[g_put] = true;
+-    g_put = (g_put+1) % g_circularbufCount;
++    g_put = (g_put+1) % GetProfilerConf()->circularbufCount;
+     g_circularBufferMutex.unlock();
+ 
+     CUPTI_CALL(cuptiPCSamplingGetData(&pcSamplingGetDataParams));
+@@ -537,10 +482,10 @@ static void CollectPCSamples() {
+ 
+ static void PreallocateBuffersForRecords()
+ {
+-    for (size_t buffers=0; buffers<g_circularbufCount; buffers++)
++    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++)
+     {
+         g_circularBuffer[buffers].size = sizeof(CUpti_PCSamplingData);
+-        g_circularBuffer[buffers].collectNumPcs = g_circularbufSize;
++        g_circularBuffer[buffers].collectNumPcs = GetProfilerConf()->circularbufSize;
+         g_circularBuffer[buffers].pPcData = (CUpti_PCSamplingPCData *)malloc(g_circularBuffer[buffers].collectNumPcs * sizeof(CUpti_PCSamplingPCData));
+         MEMORY_ALLOCATION_CALL(g_circularBuffer[buffers].pPcData);
+         for (size_t i = 0; i < g_circularBuffer[buffers].collectNumPcs; i++)
+@@ -553,7 +498,7 @@ static void PreallocateBuffersForRecords()
+ 
+ static void FreePreallocatedMemory()
+ {
+-    for (size_t buffers=0; buffers<g_circularbufCount; buffers++)
++    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++)
+     {
+         for (size_t i = 0; i < g_circularBuffer[buffers].collectNumPcs; i++)
+         {
+@@ -566,7 +511,7 @@ static void FreePreallocatedMemory()
+     for(auto& itr: g_contextInfoMap)
+     {
+         // free PC sampling buffer
+-        for (uint32_t i = 0; i < g_pcConfigBufRecordCount; i++)
++        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
+         {
+             free(itr.second->pcSamplingData.pPcData[i].stallReason);
+         }
+@@ -585,7 +530,7 @@ static void FreePreallocatedMemory()
+     for(auto& itr: g_contextInfoToFreeInEndVector)
+     {
+         // free PC sampling buffer
+-        for (uint32_t i = 0; i < g_pcConfigBufRecordCount; i++)
++        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
+         {
+             free(itr->pcSamplingData.pPcData[i].stallReason);
+         }
+@@ -657,10 +602,10 @@ void ConfigureActivity(CUcontext cuCtx)
+     // User buffer to hold collected PC Sampling data in PC-To-Counter format
+     size_t pcSamplingDataSize = sizeof(CUpti_PCSamplingData);
+     contextStateMapItr->second->pcSamplingData.size = pcSamplingDataSize;
+-    contextStateMapItr->second->pcSamplingData.collectNumPcs = g_pcConfigBufRecordCount;
+-    contextStateMapItr->second->pcSamplingData.pPcData = (CUpti_PCSamplingPCData *)malloc(g_pcConfigBufRecordCount * sizeof(CUpti_PCSamplingPCData));
++    contextStateMapItr->second->pcSamplingData.collectNumPcs = GetProfilerConf()->pcConfigBufRecordCount;
++    contextStateMapItr->second->pcSamplingData.pPcData = (CUpti_PCSamplingPCData *)malloc(GetProfilerConf()->pcConfigBufRecordCount * sizeof(CUpti_PCSamplingPCData));
+     MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData);
+-    for (uint32_t i = 0; i < g_pcConfigBufRecordCount; i++)
++    for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
+     {
+         contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason = (CUpti_PCSamplingStallReason *)malloc(numStallReasons * sizeof(CUpti_PCSamplingStallReason));
+         MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason);
+@@ -678,23 +623,23 @@ void ConfigureActivity(CUcontext cuCtx)
+     samplingDataBuffer.attributeData.samplingDataBufferData.samplingDataBuffer = (void *)&contextStateMapItr->second->pcSamplingData;
+ 
+     sampPeriod.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_PERIOD;
+-    if (g_samplingPeriod)
++    if (GetProfilerConf()->samplingPeriod)
+     {
+-        sampPeriod.attributeData.samplingPeriodData.samplingPeriod = g_samplingPeriod;
++        sampPeriod.attributeData.samplingPeriodData.samplingPeriod = GetProfilerConf()->samplingPeriod;
+         pcSamplingConfigurationInfo.push_back(sampPeriod);
+     }
+ 
+     scratchBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
+-    if (g_scratchBufSize)
++    if (GetProfilerConf()->scratchBufSize)
+     {
+-        scratchBufferSize.attributeData.scratchBufferSizeData.scratchBufferSize = g_scratchBufSize;
++        scratchBufferSize.attributeData.scratchBufferSizeData.scratchBufferSize = GetProfilerConf()->scratchBufSize;
+         pcSamplingConfigurationInfo.push_back(scratchBufferSize);
+     }
+ 
+     hwBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
+-    if (g_hwBufSize)
++    if (GetProfilerConf()->hwBufSize)
+     {
+-        hwBufferSize.attributeData.hardwareBufferSizeData.hardwareBufferSize = g_hwBufSize;
++        hwBufferSize.attributeData.hardwareBufferSizeData.hardwareBufferSize = GetProfilerConf()->hwBufSize;
+         pcSamplingConfigurationInfo.push_back(hwBufferSize);
+     }
+ 
+@@ -706,7 +651,7 @@ void ConfigureActivity(CUcontext cuCtx)
+     pcSamplingConfigurationInfo.push_back(samplingDataBuffer);
+     
+     enableStartStop.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_ENABLE_START_STOP_CONTROL;
+-    uint32_t enableStartStopControl = g_noRPC && !g_noSampling ? 0 : 1;
++    uint32_t enableStartStopControl = GetProfilerConf()->noRPC && !GetProfilerConf()->noSampling ? 0 : 1;
+     enableStartStop.attributeData.enableStartStopControlData.enableStartStopControl = enableStartStopControl;
+     pcSamplingConfigurationInfo.push_back(enableStartStop);
+ 
+@@ -755,29 +700,6 @@ void ConfigureActivity(CUcontext cuCtx)
+     contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(outputDataFormat);
+     contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(stallReason);
+ 
+-    if (g_verbose)
+-    {
+-        std::cout << std::endl;
+-        std::cout << "============ Configuration Details : ============" << std::endl;
+-        std::cout << "requested stall reason count : " << numStallReasons << std::endl;
+-        std::cout << "collection mode              : " << getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[0].attributeData.collectionModeData.collectionMode << std::endl;
+-        std::cout << "sampling period              : " << getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[1].attributeData.samplingPeriodData.samplingPeriod << std::endl;
+-        std::cout << "scratch buffer size (Bytes)  : " << getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[2].attributeData.scratchBufferSizeData.scratchBufferSize << std::endl;
+-        std::cout << "hardware buffer size (Bytes) : " << getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[3].attributeData.hardwareBufferSizeData.hardwareBufferSize << std::endl;
+-        std::cout << "start stop control           : " << getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[4].attributeData.enableStartStopControlData.enableStartStopControl << std::endl;
+-        std::cout << "configuration buffer size    : " << g_pcConfigBufRecordCount << std::endl;
+-        std::cout << "circular buffer count        : " << g_circularbufCount << std::endl;
+-        std::cout << "circular buffer record count : " << g_circularbufSize << std::endl;
+-        std::cout << "sampling duration            : " << g_samplingDuration << std::endl;
+-        std::cout << "check rsp                    : " << g_checkRSP << std::endl;
+-        std::cout << "dl backend                   : " << g_backEnd << std::endl;
+-        std::cout << "prune cct                    : " << g_pruneCCT << std::endl;
+-        std::cout << "sync before start/stop       : " << g_syncBeforeStart << std::endl;
+-        std::cout << "backtrace verbose            : " << g_backTraceVerbose << std::endl;
+-        std::cout << "=================================================" << std::endl;
+-        std::cout << std::endl;
+-    }
+-
+     return;
+ }
+ 
+@@ -788,7 +710,7 @@ void AtExitHandler()
+ {
+     // Check for any error occured while pc sampling 
+     CUPTI_CALL(cuptiGetLastError());
+-    if (g_noRPC) g_pcSamplingStarted = false;
++    if (GetProfilerConf()->noRPC) g_pcSamplingStarted = false;
+     if (g_pcSamplingStarted){
+         DEBUG_LOG("waiting for pc sampling stopping\n");
+         while (g_pcSamplingStarted);
+@@ -808,19 +730,20 @@ void AtExitHandler()
+         std::cout << "WARNING : Buffers get used faster than get stored in file. Suggestion is either increase size of buffer or increase number of buffers" << std::endl;
+     }
+ 
+-    if (g_noRPC) {
+-        if (g_rcpReplyCopyThreadHandle.joinable()) {
+-            g_rcpReplyCopyThreadHandle.join();
++    if (GetProfilerConf()->noRPC) {
++        g_cpuSamplerCollection->DisableSampling();
++        if (g_rpcReplyCopyThreadHandle.joinable()) {
++            g_rpcReplyCopyThreadHandle.join();
+         }
+-        if (g_noSampling) {
++        if (GetProfilerConf()->noSampling) {
+             RPCCopyTracingData(g_reply);
+         }
+         CopyCPUCCT2ProtoCPUCCTV2(g_reply);
+         g_reply->set_message("profiling completed");
+-        if (DumpSamplingResults(*g_reply, g_dumpFileName)) {
+-            DEBUG_LOG("dumping to %s successfully\n", g_dumpFileName.c_str());
++        if (DumpSamplingResults(*g_reply, GetProfilerConf()->dumpFileName)) {
++            DEBUG_LOG("dumping to %s successfully\n", GetProfilerConf()->dumpFileName.c_str());
+         } else {
+-            DEBUG_LOG("dumping to %s failed\n", g_dumpFileName.c_str());
++            DEBUG_LOG("dumping to %s failed\n", GetProfilerConf()->dumpFileName.c_str());
+         }
+     } else {
+         server->Shutdown();
+@@ -831,7 +754,9 @@ void AtExitHandler()
+     }
+ 
+     FreePreallocatedMemory();
+-
++    if (g_cpuSamplerCollection) {
++        delete g_cpuSamplerCollection;
++    }
+ }
+ 
+ void registerAtExitHandler(void) {
+@@ -886,9 +811,19 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
+                     if (cbInfo->callbackSite == CUPTI_API_ENTER)
+                     {
+                         // DEBUG_LOG("correlation id:%u\n", cbInfo->correlationId);
+-                        if (g_noSampling) {
+-                            if (g_DoCPUCallstackUnwinding && g_tracingStarted) {
+-                                DoBackTrace(g_backTraceVerbose);
++                        // recording all the threads launching kernels
++                        pthread_t tid = pthread_self();
++                        if (g_kernelThreadTids.find(tid) == g_kernelThreadTids.end()) {
++                            DEBUG_LOG("thread [pthread id=%u] is launching kernel\n", (uint32_t)gettid());
++                            g_kernelThreadTids.insert(tid);
++                            g_pidt2pthreadt.insert(std::make_pair(gettid(), tid));
++                            g_pthreadt2pidt.insert(std::make_pair(tid, gettid()));
++                            g_kernelThreadSyncedMap.insert(std::make_pair(tid, false));
++                            g_cpuSamplerCollection->RegisterSampler(gettid());
++                        }
++                        if (GetProfilerConf()->noSampling) {
++                            if (GetProfilerConf()->doCPUCallStackUnwinding && g_tracingStarted) {
++                                DoBackTrace(GetProfilerConf()->backTraceVerbose);
+ 
+                                 std::string tRecordKey = std::to_string(g_activeCPUPCID) + "::" + cbInfo->symbolName;
+                                 g_corID2TracingKey.insert(
+@@ -910,21 +845,15 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
+                                 timer->start();
+                             }
+                         } else {
+-                            pthread_t tid = pthread_self();
+-                            if (g_kernelThreadTids.find(tid) == g_kernelThreadTids.end()) {
+-                                DEBUG_LOG("thread [pthread id=%u] is launching kernel\n", (uint32_t)gettid());
+-                                g_kernelThreadTids.insert(tid);
+-                                g_kernelThreadSyncedMap.insert(std::make_pair(tid, false));
+-                            }
+-                            if (g_DoCPUCallstackUnwinding && g_pcSamplingStarted){
+-                                DoBackTrace(g_backTraceVerbose);
++                            if (GetProfilerConf()->doCPUCallStackUnwinding && g_pcSamplingStarted){
++                                DoBackTrace(GetProfilerConf()->backTraceVerbose);
+                             }
+                         }
+                     }
+                     if (cbInfo->callbackSite == CUPTI_API_EXIT)
+                     {
+-                        if (g_noSampling) {
+-                            if (g_DoCPUCallstackUnwinding && g_tracingStarted) {
++                        if (GetProfilerConf()->noSampling) {
++                            if (GetProfilerConf()->doCPUCallStackUnwinding && g_tracingStarted) {
+                                 std::string tRecordKey;
+                                 auto itr1 = g_corID2TracingKey.find(cbInfo->correlationId);
+                                 if (itr1 == g_corID2TracingKey.end()) {
+@@ -975,7 +904,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
+                                         GetPcSamplingDataFromCupti(pcSamplingGetDataParams, contextStateMapItr->second);
+                                     }
+                                 }
+-                                else if(contextStateMapItr->second->pcSamplingData.remainingNumPcs >= g_circularbufSize)
++                                else if(contextStateMapItr->second->pcSamplingData.remainingNumPcs >= GetProfilerConf()->circularbufSize)
+                                 {
+                                     CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
+                                     pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
+@@ -1000,10 +929,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
+                 case CUPTI_CBID_RESOURCE_CONTEXT_CREATED:
+                 {
+                     {
+-                        if (g_verbose)
+-                        {
+-                            std::cout << "Injection - Context created" << std::endl;
+-                        }
++                        DEBUG_LOG("Injection - Context created\n");
+ 
+                         // insert new entry for context.
+                         ContextInfo *contextInfo = (ContextInfo *)calloc(1, sizeof(ContextInfo));
+@@ -1034,10 +960,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
+                 break;
+                 case CUPTI_CBID_RESOURCE_CONTEXT_DESTROY_STARTING:
+                 {
+-                    if (g_verbose)
+-                    {
+-                        std::cout << "Injection - Context destroy starting" << std::endl;
+-                    }
++                    DEBUG_LOG("Injection - Context destroy starting");
+                     std::map<CUcontext, ContextInfo*>::iterator itr;
+                     g_contextInfoMutex.lock();
+                     itr = g_contextInfoMap.find(resourceData->context);
+@@ -1204,7 +1127,7 @@ static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
+ 
+             g_pcSampDataQueue.pop();
+             g_bufferEmptyTrackerArray[g_get] = false;
+-            g_get = (g_get + 1) % g_circularbufCount;
++            g_get = (g_get + 1) % GetProfilerConf()->circularbufCount;
+         }
+         g_pcSampDataQueueMutex.unlock();
+         if (to_break) break;
+@@ -1322,38 +1245,100 @@ void stopPCThreadSyncHandler(int signum) {
+     }
+ }
+ 
++void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack callStack) {
++    pthread_t tid = g_pidt2pthreadt[pid];
++    if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
++        DEBUG_LOG("new CCT, tid=%d\n", gettid());
++        CPUCCT* newCCT = new CPUCCT();
++        // set a virtual root node of the new added CCT
++        CPUCCTNode* vRootNode = new CPUCCTNode();
++
++        g_CPUCCTNodeIdMutex.lock();
++        vRootNode->id = g_CPUCCTNodeId;
++        ++g_CPUCCTNodeId;
++        g_CPUCCTNodeIdMutex.unlock();
++
++        vRootNode->funcName = "thread:" + std::to_string(pid) + "::id:" + std::to_string(vRootNode->id);
++        vRootNode->pc = 0;
++        vRootNode->offset = 0;
++        vRootNode->nodeType = CCTNODE_TYPE_CXX;
++
++        newCCT->setRootNode(vRootNode);
++        g_CPUCCTMap.insert(std::make_pair(tid, newCCT));
++    }
++
++    CPUCCT* cpuCCT = g_CPUCCTMap[tid];
++
++    auto parentNode = cpuCCT->root;
++    int i;
++    for (i = callStack.depth - 1; i >= 0; --i) {
++        if (callStack.fnames[i].length() == 0) {
++            break;
++        }
++        if (HasExcludePatterns(callStack.fnames[i])) {
++            break;
++        }
++        std::string funcName = callStack.fnames[i];
++        uint64_t pc = callStack.pcs[i];
++
++        auto childNode = parentNode->getChildbyPC(pc);
++        if (childNode) {
++            parentNode = childNode;
++        } else {
++            break;
++        }
++    }
++}
++
++void CollectCPUSamplerData() {
++    while (g_cpuSamplerCollection->IsRunning()) {
++        auto tid2CallStack = g_cpuSamplerCollection->CollectData();
++        for (auto itr: tid2CallStack) {
++            auto pid = itr.first;
++            auto callStack = itr.second;
++            UpdateCCT(pid, callStack);
++        }
++    }
++}
++
+ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
+     Status PerformGPUProfiling(ServerContext* context, const GPUProfilingRequest* request, GPUProfilingResponse* reply) override {
+         auto rpcTimer = Timer::GetGlobalTimer("rpc");
+         rpcTimer->start();
+         DEBUG_LOG("pc sampling request received, duration=%u\n", request->duration());
+ 
+-        if (g_noSampling) {
+-            g_tracingStarted = true;
+-        } else {
+-            // erasing exited threads
+-            std::vector<pthread_t> toEraseTids;
+-            for (auto tid: g_kernelThreadTids) {
+-                int res_kill = pthread_kill(tid, 0);
+-                if (res_kill == ESRCH) {
+-                    DEBUG_LOG("thread [pthreadId=%u] does no exist, about to erase\n", (uint32_t)tid);
+-                    toEraseTids.push_back(tid);
+-                }
++        // erasing exited threads
++        std::vector<pthread_t> toEraseTids;
++        for (auto tid: g_kernelThreadTids) {
++            int res_kill = pthread_kill(tid, 0);
++            if (res_kill == ESRCH) {
++                DEBUG_LOG("thread [pthreadId=%u] does no exist, about to erase\n", (uint32_t)tid);
++                toEraseTids.push_back(tid);
+             }
++        }
+ 
+-            for (auto tid: toEraseTids) {
+-                auto itr1 = g_kernelThreadTids.find(tid);
+-                if (itr1 != g_kernelThreadTids.end()) g_kernelThreadTids.erase(itr1);
+-                auto itr2 = g_kernelThreadSyncedMap.find(tid);
+-                if (itr2 != g_kernelThreadSyncedMap.end()) g_kernelThreadSyncedMap.erase(itr2);
++        for (auto tid: toEraseTids) {
++            auto itr1 = g_kernelThreadTids.find(tid);
++            if (itr1 != g_kernelThreadTids.end()) g_kernelThreadTids.erase(itr1);
++            auto itr2 = g_kernelThreadSyncedMap.find(tid);
++            if (itr2 != g_kernelThreadSyncedMap.end()) g_kernelThreadSyncedMap.erase(itr2);
++            auto itr3 = g_pthreadt2pidt.find(tid);
++            if (itr3 != g_pthreadt2pidt.end()) {
++                g_cpuSamplerCollection->DeleteSampler(itr3->second);
++                g_pidt2pthreadt.erase(itr3->second);
++                g_pthreadt2pidt.erase(itr3);
+             }
++        }
+ 
++        if (GetProfilerConf()->noSampling) {
++            g_tracingStarted = true;
++        } else {
+             for (auto tid: g_kernelThreadTids) {
+                 selectedTid = tid;
+                 break;
+             }
+ 
+-            if (g_syncBeforeStart){
++            if (GetProfilerConf()->syncBeforeStart){
+                 DEBUG_LOG("selected tid: %u\n", (uint32_t)selectedTid);
+                 for (auto tid: g_kernelThreadTids) {
+                     pthread_kill(tid, SIGUSR1);
+@@ -1362,15 +1347,17 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
+                 startCUptiPCSamplingHandler(SIGUSR1);
+             }
+ 
+-            // startCUptiPCSamplingHandler(SIGUSR1);
+             DEBUG_LOG("in rpc server, waiting for pc sampling starting\n");
+             while(!g_pcSamplingStarted);
+         }
+ 
+-        if (!g_noSampling) {
+-            g_rcpReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, reply);
++        if (!GetProfilerConf()->noSampling) {
++            g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, reply);
+         }
+ 
++        // enable cpu call stack sampling
++        g_cpuSamplerCollection->EnableSampling();
++
+         if (request->duration() > 0)
+         {
+             std::this_thread::sleep_for(std::chrono::milliseconds(request->duration()));
+@@ -1381,10 +1368,13 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
+             return Status::CANCELLED;
+         }
+ 
+-        if (g_noSampling) {
++        // disable cpu call stack sampling
++        g_cpuSamplerCollection->DisableSampling();
++
++        if (GetProfilerConf()->noSampling) {
+             g_tracingStarted = false;
+         } else {
+-            if (g_syncBeforeStart) {
++            if (GetProfilerConf()->syncBeforeStart) {
+                 for (auto tid: g_kernelThreadTids) {
+                     pthread_kill(tid, SIGUSR2);
+                 }
+@@ -1393,9 +1383,9 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
+             }
+         }
+ 
+-        if (!g_noSampling) {
+-            if (g_rcpReplyCopyThreadHandle.joinable()) {
+-                g_rcpReplyCopyThreadHandle.join();
++        if (!GetProfilerConf()->noSampling) {
++            if (g_rpcReplyCopyThreadHandle.joinable()) {
++                g_rpcReplyCopyThreadHandle.join();
+             }
+         } else {
+             RPCCopyTracingData(reply);
+@@ -1432,14 +1422,15 @@ void RunServer() {
+ 
+ extern "C" int InitializeInjection(void)
+ {
+-    InitCUptiSettings();
+     g_initializeInjectionMutex.lock();
+     if (!g_initializedInjection)
+     {
+         DEBUG_LOG("... Initialize injection ...\n");
+ 
+-        g_circularBuffer.resize(g_circularbufCount);
+-        g_bufferEmptyTrackerArray.resize(g_circularbufCount, false);
++        g_cpuSamplerCollection = new CPUCallStackSamplerCollection();
++
++        g_circularBuffer.resize(GetProfilerConf()->circularbufCount);
++        g_bufferEmptyTrackerArray.resize(GetProfilerConf()->circularbufCount, false);
+ 
+         // CUpti_SubscriberHandle subscriber;
+         CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)&CallbackHandler, NULL));
+@@ -1447,47 +1438,26 @@ extern "C" int InitializeInjection(void)
+         // Subscribe for all domains
+         CUPTI_CALL(cuptiEnableAllDomains(1, subscriber));
+ 
+-        // Subscribe for all the launch callbacks
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunch));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchGrid));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchGridAsync));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchKernel));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchKernel_ptsz));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchCooperativeKernel));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchCooperativeKernel_ptsz));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API, CUPTI_DRIVER_TRACE_CBID_cuLaunchCooperativeKernelMultiDevice));
+-        // // Subscribe for module and context callbacks
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RESOURCE, CUPTI_CBID_RESOURCE_MODULE_LOADED));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RESOURCE, CUPTI_CBID_RESOURCE_MODULE_PROFILED));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RESOURCE, CUPTI_CBID_RESOURCE_MODULE_UNLOAD_STARTING));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RESOURCE, CUPTI_CBID_RESOURCE_CONTEXT_CREATED));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RESOURCE, CUPTI_CBID_RESOURCE_CONTEXT_DESTROY_STARTING));
+-        // // Subscribe for runtime APIs
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API, CUPTI_RUNTIME_TRACE_CBID_cudaLaunch_v3020));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API, CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_v7000));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API, CUPTI_RUNTIME_TRACE_CBID_cudaLaunch_ptsz_v7000));
+-        // CUPTI_CALL(cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API, CUPTI_RUNTIME_TRACE_CBID_cudaLaunchKernel_ptsz_v7000));
+-
+         g_initializedInjection = true;
+     }
+     
+     signal(SIGUSR1, startPCThreadSyncHanlder);
+     signal(SIGUSR2, stopPCThreadSyncHandler);
+ 
+-    if (g_noRPC){
++    if (GetProfilerConf()->noRPC){
+         g_pcSamplingStarted = true;
++        g_cpuSamplerCollection->EnableSampling();
+         g_tracingStarted = true;
+         g_reply = new GPUProfilingResponse();
+-        if (!g_noSampling) {
+-            g_rcpReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
++        if (!GetProfilerConf()->noSampling) {
++            g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
+         }
+     } else {
+         g_rpcServerThreadHandle = std::thread(RunServer);
+     }
+ 
+-    g_mainThreadPid = getpid();
+-    DEBUG_LOG("main thread pid=%u\n", (uint32_t)g_mainThreadPid);
+-    g_mainThreadTid = pthread_self();
++    DEBUG_LOG("main thread pid=%u\n", (uint32_t)getpid());
++    GetProfilerConf()->mainThreadTid = pthread_self();
+ 
+     registerAtExitHandler();
+     g_initializeInjectionMutex.unlock();
+diff --git a/gpu_profiler.h b/gpu_profiler.h
+index 6721020..ea91b1b 100644
+--- a/gpu_profiler.h
++++ b/gpu_profiler.h
+@@ -36,15 +36,11 @@
+ #include <grpcpp/ext/proto_server_reflection_plugin.h>
+ 
+ #include "utils.h"
++#include "cpu_sampler.h"
+ #include "tools/tools.h"
+ #include "calling_ctx_tree.h"
+ #include "./cpp-gen/gpu_profiling.grpc.pb.h"
+ 
+-#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
+-#include <sys/syscall.h>
+-#define gettid() syscall(SYS_gettid)
+-#endif
+-
+ using namespace CUPTI::PcSamplingUtil;
+ using grpc::Server;
+ using grpc::ServerAsyncResponseWriter;
+@@ -58,44 +54,6 @@ using gpuprofiling::GPUProfilingService;
+ using gpuprofiling::CPUCallingContextTree;
+ using gpuprofiling::CPUCallingContextNode;
+ 
+-#define DEBUG true
+-#define DEBUG_LOG_LENGTH 4096
+-
+-#define DEBUG_LOG(format, args...)                                          \
+-do {                                                                        \
+-    if (DEBUG) {                                                            \
+-        printf("[DEBUG LOG] " format, ##args);                              \
+-    }                                                                       \
+-} while (0)
+-
+-#define CUPTI_CALL(call)                                                    \
+-do {                                                                        \
+- CUptiResult _status = call;                                                \
+- if (_status != CUPTI_SUCCESS)                                              \
+-    {                                                                       \
+-     const char* errstr;                                                    \
+-     cuptiGetResultString(_status, &errstr);                                \
+-     fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n",   \
+-             __FILE__,                                                      \
+-             __LINE__,                                                      \
+-             #call,                                                         \
+-             errstr);                                                       \
+-     exit(-1);                                                              \
+-    }                                                                       \
+-} while (0)
+-
+-#define MEMORY_ALLOCATION_CALL(var)                                             \
+-do {                                                                            \
+-    if (var == NULL) {                                                          \
+-        fprintf(stderr, "%s:%d: Error: Memory Allocation Failed \n",            \
+-                __FILE__, __LINE__);                                            \
+-        exit(-1);                                                               \
+-    }                                                                           \
+-} while (0)
+-
+-#define THREAD_SLEEP_TIME 100 // in ms
+-#define FUNC_NAME_LENGTH 4096
+-
+ typedef struct contextInfo
+ {
+     uint32_t contextUid;
+@@ -165,15 +123,14 @@ std::queue<std::pair<CUpti_PCSamplingData*, ContextInfo*>> g_pcSampDataQueue;
+ std::recursive_mutex g_pcSampDataQueueMutex;
+ 
+ // Variables related to start/stop sampling
+-size_t g_samplingDuration = 0;
+ std::thread g_rpcServerThreadHandle;
+ bool g_pcSamplingStarted = false;
+ std::recursive_mutex g_stopSamplingMutex;
+-pid_t g_mainThreadPid;
+-pthread_t g_mainThreadTid;
+ pid_t g_rpcServerThreadPid;
+ // recording all the threads launching cuda kernels
+ std::unordered_set<pthread_t> g_kernelThreadTids;
++std::unordered_map<pid_t, pthread_t> g_pidt2pthreadt;
++std::unordered_map<pthread_t, pid_t> g_pthreadt2pidt;
+ std::unordered_map<pthread_t, bool> g_kernelThreadSyncedMap;
+ bool g_kernelThreadSynced = false;
+ // id of selected thread to execute cuptiStart/StopPCSampling
+@@ -189,12 +146,10 @@ std::unordered_map<CUpti_PCSamplingPCData*, unw_word_t> g_GPUPCSamplesParentCPUP
+ std::mutex g_GPUPCSamplesParentCPUPCIDsMutex;
+ uint64_t g_CPUCCTNodeId = 1;
+ std::mutex g_CPUCCTNodeIdMutex;
+-bool g_pruneCCT = true;
+ std::unordered_map<uint64_t, uint64_t> g_esp2pcIdMap;
+-bool g_checkRSP = true;
+ std::stack<UNWValue> g_callStack;
+ bool g_genCallStack = false;
+-bool g_backTraceVerbose = false;
++CPUCallStackSamplerCollection* g_cpuSamplerCollection;
+ 
+ // Variables related to initialize injection once.
+ bool g_initializedInjection = false;
+@@ -202,37 +157,14 @@ std::mutex g_initializeInjectionMutex;
+ 
+ // the standby grpc server
+ std::unique_ptr<Server> server;
+-bool g_noRPC = false;
+-std::string g_dumpFileName = "profiling_response.pb.gz";
+-std::thread g_rcpReplyCopyThreadHandle;
++std::thread g_rpcReplyCopyThreadHandle;
+ GPUProfilingResponse* g_reply;
+ 
+ // cupti args
+ CUpti_PCSamplingCollectionMode g_pcSamplingCollectionMode = CUPTI_PC_SAMPLING_COLLECTION_MODE_CONTINUOUS;
+-uint32_t g_samplingPeriod = 0;
+-size_t g_scratchBufSize = 0;
+-size_t g_hwBufSize = 0;
+-size_t g_pcConfigBufRecordCount = 1000;
+-size_t g_circularbufCount = 10;
+-size_t g_circularbufSize = 500;
+-bool g_verbose = true;
+ CUpti_SubscriberHandle subscriber;
+ 
+ // return pc samples only
+-bool g_fakeBT = false;
+-bool g_DoCPUCallstackUnwinding = true;
+-
+-// variables related to python back tracing
+-std::string g_backEnd = "TORCH"; // TF or TORCH
+-// std::queue<UNWValue> g_pyCallPathQueue;
+-// std::mutex g_pyBackTraceMutex;
+-std::string g_pyFileName = "main.py";
+-
+-// for debug
+-bool g_syncBeforeStart = false;
+-
+-// 0 for tracing, 1 for sampling
+-bool g_noSampling = false;
+ bool g_tracingStarted = false;
+ 
+ class CUptiTracingRecord {
+diff --git a/run.sh b/run.sh
+new file mode 100755
+index 0000000..3371a7e
+--- /dev/null
++++ b/run.sh
+@@ -0,0 +1,11 @@
++export CUDA_INJECTION64_PATH=`realpath libgpu_profiler_v2.so`
++
++export NO_SAMPLING=1
++export DL_BACKEND=TORCH
++export PRUNE_CCT=0
++export CHECK_RSP=0
++export NO_RPC=0
++export BT_VERBOSE=0
++export DUMP_FN=profiling_results.pb.gz
++
++# <the command to run your application>
+diff --git a/test.cpp b/test.cpp
+index a97d868..1127c4d 100644
+--- a/test.cpp
++++ b/test.cpp
+@@ -3,6 +3,8 @@
+ #include "cpu_sampler.h"
+ 
+ bool verbose = true;
++bool samplingStarted = false;
++pid_t mainPid = -1;
+ 
+ void TestProfilerConf() {
+     auto profilerConf = GetProfilerConf();
+@@ -88,12 +90,44 @@ void TestCppStackPointer() {
+     barFunc();
+ }
+ 
++void TestCPUCallStackSampler() {
++    if (mainPid < 0) std::cerr << "main pid not initialized" << std::endl;
++    auto cpuSampler = GetCPUCallStackSampler(mainPid);
++    cpuSampler->EnableSampling();
++    while (samplingStarted) {
++        CPUCallStackSampler::CallStack callStack;
++        int ret = cpuSampler->CollectData(
++            GetProfilerConf()->cpuSamplingTimeout,
++            GetProfilerConf()->cpuSamplingMaxDepth,
++            callStack
++        );
++        printf("ret=%d\n", ret);
++        if (ret == 0) {
++            printf("time=%lu\n", callStack.time);
++            printf("pid,tid=%d,%d\n", callStack.pid, callStack.tid);
++            printf("stack:\n");
++            for (int j = 0; j < callStack.depth; ++j) {
++                printf("[%d]    %s:%lx\n", j, callStack.fnames[j].c_str(), callStack.pcs[j]);
++            }
++        }
++    }
++    std::cout << "sampling stopped" << std::endl;
++    delete cpuSampler;
++}
++
+ int main(int argc, char** argv) {
+     if (argc > 1) verbose = std::atoi(argv[2]);
++    mainPid = gettid();
++    samplingStarted = true;
++    auto testCPUCallStackSamplerThreadHandle = std::thread(TestCPUCallStackSampler);
+     TestProfilerConf();
+     TestBackTracerOverheadS1();
+     TestBackTracerOverheadR1(std::atoi(argv[1]));
+     TestBackTracerOverheadR2(std::atoi(argv[1]));
+     TestCppStackPointer();
++    samplingStarted = false;
++    if (testCPUCallStackSamplerThreadHandle.joinable()) {
++        testCPUCallStackSamplerThreadHandle.join();
++    }
+     return 0;
+ }
+diff --git a/utils.h b/utils.h
+index 5910090..d717fa3 100644
+--- a/utils.h
++++ b/utils.h
+@@ -2,6 +2,8 @@
+ #define __UTILS_INCLUDED__
+ #include <string>
+ #include <chrono>
++#include <cassert>
++#include <sys/time.h>
+ #include <unordered_map>
+ 
+ class Timer {
+@@ -53,6 +55,12 @@ public:
+         }
+     }
+ 
++    static uint64_t GetMilliSeconds() {
++        struct timeval now;
++        assert(gettimeofday(&now, 0) == 0);
++        return now.tv_sec * 1000 + now.tv_usec / 1000;
++    }
++
+ private:
+     std::chrono::system_clock::time_point t_start;
+     int64_t accumulated;
