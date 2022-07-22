@@ -2,6 +2,8 @@
 #define __UTILS_INCLUDED__
 #include <string>
 #include <chrono>
+#include <cassert>
+#include <sys/time.h>
 #include <unordered_map>
 
 class Timer {
@@ -51,6 +53,12 @@ public:
             timerMap.insert(std::make_pair(name, timer));
             return timer;
         }
+    }
+
+    static uint64_t GetMilliSeconds() {
+        struct timeval now;
+        assert(gettimeofday(&now, 0) == 0);
+        return now.tv_sec * 1000 + now.tv_usec / 1000;
     }
 
 private:

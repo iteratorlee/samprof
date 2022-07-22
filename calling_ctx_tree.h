@@ -117,7 +117,7 @@ public:
 typedef std::unordered_map<pthread_t, CPUCCT*> CCTMAP_t;
 
 static bool HasExcludePatterns(std::string funcName) {
-	std::vector<std::string> excludePatterns = {"cupti", "CUpti", "cuTexRefGetArray"};
+	std::vector<std::string> excludePatterns = {"cupti", "CUpti", "cuTexRefGetArray", "GenCallStack"};
 	for (auto pattern: excludePatterns) {
 		if(funcName.find(pattern) != std::string::npos) {
 			return true;

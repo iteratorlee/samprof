@@ -24,6 +24,8 @@
 #define DEBUG true
 #define DEBUG_LOG_LENGTH 4096
 
+#define min2(a, b) ((a) < (b) ? (a) : (b))
+
 #define DEBUG_LOG(format, args...)                                          \
 do {                                                                        \
     if (DEBUG) {                                                            \
@@ -86,8 +88,10 @@ public:
     size_t circularbufSize = 500;
 
     // cpu sampling configurations
-    uint64_t cpuSamplingPeriod;
-    uint64_t cpuSamplingPages;
+    uint64_t cpuSamplingPeriod = 1000;
+    uint64_t cpuSamplingPages = 128;
+    int32_t cpuSamplingTimeout = -1;
+    uint64_t cpuSamplingMaxDepth = 256;
 
     // event-driven cpu cct contruction configurations
     bool fakeBT = false;
@@ -109,15 +113,35 @@ public:
     void PrintProfilerConf() {
         std::cout << std::endl;
         std::cout << "============ Configuration Details : ============" << std::endl;
+        std::cout << "gpu pc sampling period       : " << samplingPeriod << std::endl;
+        std::cout << "scratch buffer size          : " << scratchBufSize << std::endl;
+        std::cout << "hw buffer size               : " << hwBufSize << std::endl;
         std::cout << "configuration buffer size    : " << pcConfigBufRecordCount << std::endl;
         std::cout << "circular buffer count        : " << circularbufCount << std::endl;
         std::cout << "circular buffer record count : " << circularbufSize << std::endl;
+
+        std::cout << "cpu pc sampling period       : " << cpuSamplingPeriod << std::endl;
+        std::cout << "cpu pc sampling buffer pages : " << cpuSamplingPages << std::endl;
+        std::cout << "cpu pc sampling timeout      : " << cpuSamplingTimeout << std::endl;
+        std::cout << "cpu pc sampling max depth    : " << cpuSamplingMaxDepth << std::endl;
+
+        std::cout << "fake CCT                     : " << fakeBT << std::endl;
+        std::cout << "do CPU call stack unwinding  : " << doCPUCallStackUnwinding << std::endl;
         std::cout << "check rsp                    : " << checkRSP << std::endl;
-        std::cout << "dl backend                   : " << backEnd << std::endl;
         std::cout << "prune cct                    : " << pruneCCT << std::endl;
         std::cout << "sync before start/stop       : " << syncBeforeStart << std::endl;
         std::cout << "backtrace verbose            : " << backTraceVerbose << std::endl;
         std::cout << "do py unwinding              : " << doPyUnwinding << std::endl;
+        std::cout << "no RPC                       : " << noRPC << std::endl;
+        std::cout << "no Sampling                  : " << noSampling << std::endl;
+
+        std::cout << "dl backend                   : " << backEnd << std::endl;
+        std::cout << "python file name             : " << pyFileName << std::endl;
+        if (noRPC) {
+            std::cout << "dump file name (no)          : " << dumpFileName << std::endl;
+        }
+
+        std::cout << "main thread tid              : " << mainThreadTid << std::endl;
         std::cout << "=================================================" << std::endl;
         std::cout << std::endl;
     }
@@ -170,7 +194,7 @@ private:
         }
         if (backEnd == "TORCH") {
             // TODO: how to decide py unwinding?
-            // doPyUnwinding = true;
+            doPyUnwinding = true;
         }
         if ((s = getenv("NO_RPC")) != nullptr) {
             noRPC = std::strtol(s, nullptr, 10);
@@ -186,6 +210,12 @@ private:
         }
         if ((s = getenv("CPU_SAMPLING_BUFFER_PAGES")) != nullptr) {
             cpuSamplingPages = std::strtoul(s, nullptr, 10);
+        }
+        if ((s = getenv("CPU_SAMPLING_TIMEOUT")) != nullptr) {
+            cpuSamplingTimeout = std::strtol(s, nullptr, 10);
+        }
+        if ((s = getenv("CPU_SAMPLING_MAX_DEPTH")) != nullptr) {
+            cpuSamplingMaxDepth = std::strtoul(s, nullptr, 10);
         }
     }
 };

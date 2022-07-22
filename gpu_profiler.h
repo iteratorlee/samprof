@@ -36,14 +36,10 @@
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 
 #include "utils.h"
+#include "cpu_sampler.h"
 #include "tools/tools.h"
 #include "calling_ctx_tree.h"
 #include "./cpp-gen/gpu_profiling.grpc.pb.h"
-
-#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
-#include <sys/syscall.h>
-#define gettid() syscall(SYS_gettid)
-#endif
 
 using namespace CUPTI::PcSamplingUtil;
 using grpc::Server;
@@ -57,44 +53,6 @@ using gpuprofiling::GPUProfilingResponse;
 using gpuprofiling::GPUProfilingService;
 using gpuprofiling::CPUCallingContextTree;
 using gpuprofiling::CPUCallingContextNode;
-
-#define DEBUG true
-#define DEBUG_LOG_LENGTH 4096
-
-#define DEBUG_LOG(format, args...)                                          \
-do {                                                                        \
-    if (DEBUG) {                                                            \
-        printf("[DEBUG LOG] " format, ##args);                              \
-    }                                                                       \
-} while (0)
-
-#define CUPTI_CALL(call)                                                    \
-do {                                                                        \
- CUptiResult _status = call;                                                \
- if (_status != CUPTI_SUCCESS)                                              \
-    {                                                                       \
-     const char* errstr;                                                    \
-     cuptiGetResultString(_status, &errstr);                                \
-     fprintf(stderr, "%s:%d: error: function %s failed with error %s.\n",   \
-             __FILE__,                                                      \
-             __LINE__,                                                      \
-             #call,                                                         \
-             errstr);                                                       \
-     exit(-1);                                                              \
-    }                                                                       \
-} while (0)
-
-#define MEMORY_ALLOCATION_CALL(var)                                             \
-do {                                                                            \
-    if (var == NULL) {                                                          \
-        fprintf(stderr, "%s:%d: Error: Memory Allocation Failed \n",            \
-                __FILE__, __LINE__);                                            \
-        exit(-1);                                                               \
-    }                                                                           \
-} while (0)
-
-#define THREAD_SLEEP_TIME 100 // in ms
-#define FUNC_NAME_LENGTH 4096
 
 typedef struct contextInfo
 {
@@ -165,15 +123,14 @@ std::queue<std::pair<CUpti_PCSamplingData*, ContextInfo*>> g_pcSampDataQueue;
 std::recursive_mutex g_pcSampDataQueueMutex;
 
 // Variables related to start/stop sampling
-size_t g_samplingDuration = 0;
 std::thread g_rpcServerThreadHandle;
 bool g_pcSamplingStarted = false;
 std::recursive_mutex g_stopSamplingMutex;
-pid_t g_mainThreadPid;
-pthread_t g_mainThreadTid;
 pid_t g_rpcServerThreadPid;
 // recording all the threads launching cuda kernels
 std::unordered_set<pthread_t> g_kernelThreadTids;
+std::unordered_map<pid_t, pthread_t> g_pidt2pthreadt;
+std::unordered_map<pthread_t, pid_t> g_pthreadt2pidt;
 std::unordered_map<pthread_t, bool> g_kernelThreadSyncedMap;
 bool g_kernelThreadSynced = false;
 // id of selected thread to execute cuptiStart/StopPCSampling
@@ -189,12 +146,10 @@ std::unordered_map<CUpti_PCSamplingPCData*, unw_word_t> g_GPUPCSamplesParentCPUP
 std::mutex g_GPUPCSamplesParentCPUPCIDsMutex;
 uint64_t g_CPUCCTNodeId = 1;
 std::mutex g_CPUCCTNodeIdMutex;
-bool g_pruneCCT = true;
 std::unordered_map<uint64_t, uint64_t> g_esp2pcIdMap;
-bool g_checkRSP = true;
 std::stack<UNWValue> g_callStack;
 bool g_genCallStack = false;
-bool g_backTraceVerbose = false;
+CPUCallStackSamplerCollection* g_cpuSamplerCollection;
 
 // Variables related to initialize injection once.
 bool g_initializedInjection = false;
@@ -202,37 +157,14 @@ std::mutex g_initializeInjectionMutex;
 
 // the standby grpc server
 std::unique_ptr<Server> server;
-bool g_noRPC = false;
-std::string g_dumpFileName = "profiling_response.pb.gz";
-std::thread g_rcpReplyCopyThreadHandle;
+std::thread g_rpcReplyCopyThreadHandle;
 GPUProfilingResponse* g_reply;
 
 // cupti args
 CUpti_PCSamplingCollectionMode g_pcSamplingCollectionMode = CUPTI_PC_SAMPLING_COLLECTION_MODE_CONTINUOUS;
-uint32_t g_samplingPeriod = 0;
-size_t g_scratchBufSize = 0;
-size_t g_hwBufSize = 0;
-size_t g_pcConfigBufRecordCount = 1000;
-size_t g_circularbufCount = 10;
-size_t g_circularbufSize = 500;
-bool g_verbose = true;
 CUpti_SubscriberHandle subscriber;
 
 // return pc samples only
-bool g_fakeBT = false;
-bool g_DoCPUCallstackUnwinding = true;
-
-// variables related to python back tracing
-std::string g_backEnd = "TORCH"; // TF or TORCH
-// std::queue<UNWValue> g_pyCallPathQueue;
-// std::mutex g_pyBackTraceMutex;
-std::string g_pyFileName = "main.py";
-
-// for debug
-bool g_syncBeforeStart = false;
-
-// 0 for tracing, 1 for sampling
-bool g_noSampling = false;
 bool g_tracingStarted = false;
 
 class CUptiTracingRecord {

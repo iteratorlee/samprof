@@ -55,10 +55,10 @@ endif
 
 all: gpu_profiler
 
-gpu_profiler: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
+gpu_profiler: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp cpu_sampler.cpp
 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o $(LIBNAMEV2) -shared $^ $(LIBS) $(LDFLAGS)
 
-gpu_profiler_debug: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
+gpu_profiler_debug: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp cpu_sampler.cpp
 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o profiler_debug $^ $(LIBS) $(LDFLAGS)
 
 gpu_profiler_wo_rpc: gpu_profiler_wo_rpc.cpp
@@ -76,8 +76,8 @@ client_cpp: tools/client.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.g
 cubin_tool: tools/cubin_tool.cpp tools/get_cubin_crc.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
 	$(NVCC) -g -std=c++11 $^ -o $@ $(LIBS) $(LDFLAGS)
 
-test: test.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp back_tracer.cpp
-	$(NVCC) -g -std=c++11 $^ -o $@ $(LIBS) $(LDFLAGS)
+test: test.cpp common.cpp back_tracer.cpp cpu_sampler.cpp
+	$(NVCC) -forward-unknown-to-host-compiler -rdynamic -g -std=c++11 $^ -o $@ $(LIBS)
 
 .PRECIOUS: $(GRPC_CPP_GEN_PATH)/%.pb.cc
 cpp-gen/%.pb.cc: %.proto

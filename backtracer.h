@@ -38,7 +38,7 @@ typedef enum {
 static inline void PrintUNWValue(UNWValue& val) {
     pid_t pid = gettid();
     pthread_t tid = pthread_self();
-    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lu:[%s+%lu]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
+    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lx:[%s+%lx]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
 }
 
 static const char* PyObj2Str(PyObject* obj) {

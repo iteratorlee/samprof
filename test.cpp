@@ -3,6 +3,8 @@
 #include "cpu_sampler.h"
 
 bool verbose = true;
+bool samplingStarted = false;
+pid_t mainPid = -1;
 
 void TestProfilerConf() {
     auto profilerConf = GetProfilerConf();
@@ -88,12 +90,44 @@ void TestCppStackPointer() {
     barFunc();
 }
 
+void TestCPUCallStackSampler() {
+    if (mainPid < 0) std::cerr << "main pid not initialized" << std::endl;
+    auto cpuSampler = GetCPUCallStackSampler(mainPid);
+    cpuSampler->EnableSampling();
+    while (samplingStarted) {
+        CPUCallStackSampler::CallStack callStack;
+        int ret = cpuSampler->CollectData(
+            GetProfilerConf()->cpuSamplingTimeout,
+            GetProfilerConf()->cpuSamplingMaxDepth,
+            callStack
+        );
+        printf("ret=%d\n", ret);
+        if (ret == 0) {
+            printf("time=%lu\n", callStack.time);
+            printf("pid,tid=%d,%d\n", callStack.pid, callStack.tid);
+            printf("stack:\n");
+            for (int j = 0; j < callStack.depth; ++j) {
+                printf("[%d]    %s:%lx\n", j, callStack.fnames[j].c_str(), callStack.pcs[j]);
+            }
+        }
+    }
+    std::cout << "sampling stopped" << std::endl;
+    delete cpuSampler;
+}
+
 int main(int argc, char** argv) {
     if (argc > 1) verbose = std::atoi(argv[2]);
+    mainPid = gettid();
+    samplingStarted = true;
+    auto testCPUCallStackSamplerThreadHandle = std::thread(TestCPUCallStackSampler);
     TestProfilerConf();
     TestBackTracerOverheadS1();
     TestBackTracerOverheadR1(std::atoi(argv[1]));
     TestBackTracerOverheadR2(std::atoi(argv[1]));
     TestCppStackPointer();
+    samplingStarted = false;
+    if (testCPUCallStackSamplerThreadHandle.joinable()) {
+        testCPUCallStackSamplerThreadHandle.join();
+    }
     return 0;
 }

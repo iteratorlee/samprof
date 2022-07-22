@@ -26,7 +26,6 @@ profiler_debug
 /.ipynb_checkpoints/
 
 *.S
-*.sh
 *.gz
 *.pt
 *.tar
