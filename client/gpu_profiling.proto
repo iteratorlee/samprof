@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+option objc_class_prefix = "GPUPROF";
+option go_package = "./go-gen;gpuprofiling";
+
+package gpuprofiling;
+
+service GPUProfilingService {
+    rpc PerformGPUProfiling (GPUProfilingRequest) returns (GPUProfilingResponse) {}
+}
+
+message CPUCallingContextTree {
+    CPUCallingContextNode root = 1;
+    uint64 rootPC = 2;
+    uint64 rootID = 3;
+    //repeated CPUCallingContextNode nodes = 2;
+    map<int64, CPUCallingContextNode> nodeMap = 4;
+}
+
+message CPUCallingContextNode {
+    // unique id of a CPU cct in a profiling session
+    uint64 id = 1;
+    uint64 pc = 2;
+    uint64 offset = 3;
+    string funcName = 4;
+    uint64 parentID = 5;
+    uint64 parentPC = 6;
+    repeated CPUCallingContextNode childs = 7;
+    repeated uint64 childIDs = 8;
+    repeated uint64 childPCs = 9;
+}
+
+message GPUCallingGraphNode {
+    uint64 cubinCrc = 1;
+    string funcName = 2;
+    uint64 addrBegin = 3;
+    uint64 addrEnd = 4;
+    uint64 weight = 5;
+}
+
+message GPUCallingGraphEdge {
+    // GPUCallingGraphNode src = 1;
+    string srcFuncName = 1;
+    uint64 srcPCOffset = 2;
+    // GPUCallingGraphNode dst = 3;
+    string dstFuncName = 3;
+    uint64 dstPCOffset = 4;
+    uint64 weight = 5;
+}
+
+message GPUCallingGraph {
+    repeated GPUCallingGraphNode nodes = 1;
+    repeated GPUCallingGraphEdge edges = 2;
+}
+
+// // old version pc sampling api
+// message CUpti_ActivitySourceLocator {
+//     uint32 id = 1;
+//     uint32 lineNumber = 2;
+//     string fileName = 3;
+// }
+
+// message CUpti_ActivityPCSampling3 {
+//     uint32 sourceLocatorId = 1;
+//     uint32 correlationId = 2;
+//     uint32 functionId = 3;
+//     uint32 latencySamples = 4;
+//     uint32 samples = 5;
+//     string stallReason = 6;
+//     uint64 pcOffset = 7;
+// }
+
+// message CUpti_ActivityPCSamplingRecordInfo {
+//     uint32 correlationId = 1;
+//     uint64 totalSamples = 2;
+//     uint64 droppedSamples = 3;
+//     uint64 samplingPeriodInCycles = 4;
+// }
+
+// message CUpti_ActivityFunction {
+//     uint32 id = 1;
+//     uint32 contextId = 2;
+//     uint32 moduleId = 3;
+//     uint32 functionIndex = 4;
+//     string name = 5;
+// }
+
+// new version pc sampling api
+message PCSamplingStallReason {
+    // collected stall reason index.
+    uint32 pcSamplingStallReasonIndex = 1;
+    // number of times the PC was sampled with the stallReaosn.
+    uint32 samples = 2;
+}
+
+message CUptiPCSamplingPCData {
+    uint32 size = 1;
+    uint64 cubinCrc = 2;
+    uint64 pcOffset = 3;
+    uint32 functionIndex = 4;
+    uint32 pad = 5;
+    string functionName = 6;
+    uint32 stallReasonCount = 7;
+    repeated PCSamplingStallReason stallReason = 8;
+    int64 parentCPUPCID = 9;
+    // in old version CUPTI (<11.3), pc sample it correlated to a CUDA api
+    uint32 correlationId = 10;
+}
+
+message CUptiPCSamplingData {
+    uint32 size = 1;
+    uint32 collectNumPcs = 2;
+    uint64 totalSamples = 3;
+    uint64 droppedSamples = 4;
+    uint32 totalNumPcs = 5;
+    uint32 remainingNumPcs = 6;
+    uint64 rangeId = 7;
+    repeated CUptiPCSamplingPCData pPcData = 8;
+    uint64 nonUsrKernelsTotalSamples = 9;
+}
+
+message GPUProfilingRequest {
+    uint32 duration = 1;
+}
+
+message GPUProfilingResponse {
+    string message = 1;
+    // version: indicating cupti pc sampling api version, 0/1 for old/new version
+    bool version = 2;
+    repeated CUptiPCSamplingData pcSamplingData = 3;
+    repeated CPUCallingContextTree cpuCallingCtxTree = 4;
+}
