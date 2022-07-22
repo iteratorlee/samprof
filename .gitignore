@@ -7,7 +7,6 @@
 *.xlsx
 
 test
-client
 server
 cct_tool
 client_go
