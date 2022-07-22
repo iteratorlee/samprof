@@ -710,20 +710,25 @@ void AtExitHandler()
 {
     // Check for any error occured while pc sampling 
     CUPTI_CALL(cuptiGetLastError());
-    if (GetProfilerConf()->noRPC) g_pcSamplingStarted = false;
+    if (GetProfilerConf()->noRPC) {
+        g_pcSamplingStarted = false;
+        g_tracingStarted = false;
+    }
     if (g_pcSamplingStarted){
         DEBUG_LOG("waiting for pc sampling stopping\n");
         while (g_pcSamplingStarted);
     }
     DEBUG_LOG("profiling stopped\n");
 
-    for(auto& itr: g_contextInfoMap) {
-        // disable pc sampling at exit
-        CUpti_PCSamplingDisableParams pcSamplingDisableParams = {};
-        pcSamplingDisableParams.size = CUpti_PCSamplingDisableParamsSize;
-        pcSamplingDisableParams.ctx = itr.first;
-        CUPTI_CALL(cuptiPCSamplingDisable(&pcSamplingDisableParams));
-        DEBUG_LOG("pc sampling disabled for context %u\n", itr.second->contextUid);
+    if (!GetProfilerConf()->noSampling) {
+        for(auto& itr: g_contextInfoMap) {
+            // disable pc sampling at exit
+            CUpti_PCSamplingDisableParams pcSamplingDisableParams = {};
+            pcSamplingDisableParams.size = CUpti_PCSamplingDisableParamsSize;
+            pcSamplingDisableParams.ctx = itr.first;
+            CUPTI_CALL(cuptiPCSamplingDisable(&pcSamplingDisableParams));
+            DEBUG_LOG("pc sampling disabled for context %u\n", itr.second->contextUid);
+        }
     }
 
     if (g_buffersGetUtilisedFasterThanStore) {
@@ -931,72 +936,76 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
                     {
                         DEBUG_LOG("Injection - Context created\n");
 
-                        // insert new entry for context.
-                        ContextInfo *contextInfo = (ContextInfo *)calloc(1, sizeof(ContextInfo));
-                        MEMORY_ALLOCATION_CALL(contextInfo);
-                        g_contextInfoMutex.lock();
-                        g_contextInfoMap.insert(std::make_pair(resourceData->context, contextInfo));
-                        g_contextInfoMutex.unlock();
+                        if (!GetProfilerConf()->noSampling) {
+                            // insert new entry for context.
+                            ContextInfo *contextInfo = (ContextInfo *)calloc(1, sizeof(ContextInfo));
+                            MEMORY_ALLOCATION_CALL(contextInfo);
+                            g_contextInfoMutex.lock();
+                            g_contextInfoMap.insert(std::make_pair(resourceData->context, contextInfo));
+                            g_contextInfoMutex.unlock();
 
-                        CUpti_PCSamplingEnableParams pcSamplingEnableParams = {};
-                        pcSamplingEnableParams.size = CUpti_PCSamplingEnableParamsSize;
-                        pcSamplingEnableParams.ctx = resourceData->context;
-                        CUPTI_CALL(cuptiPCSamplingEnable(&pcSamplingEnableParams));
-                        
-                        ConfigureActivity(resourceData->context);
+                            CUpti_PCSamplingEnableParams pcSamplingEnableParams = {};
+                            pcSamplingEnableParams.size = CUpti_PCSamplingEnableParamsSize;
+                            pcSamplingEnableParams.ctx = resourceData->context;
+                            CUPTI_CALL(cuptiPCSamplingEnable(&pcSamplingEnableParams));
+ 
+                            ConfigureActivity(resourceData->context);
 
-                        g_circularBufferMutex.lock();
-                        if (!g_allocatedCircularBuffers)
-                        {
-                            PreallocateBuffersForRecords();
-                            g_allocatedCircularBuffers = true;
+                            g_circularBufferMutex.lock();
+                            if (!g_allocatedCircularBuffers)
+                            {
+                                PreallocateBuffersForRecords();
+                                g_allocatedCircularBuffers = true;
+                            }
+
+                            // raise(SIGUSR1); // DEBUG
+
+                            g_circularBufferMutex.unlock();
                         }
-
-                        // raise(SIGUSR1); // DEBUG
-                        
-                        g_circularBufferMutex.unlock();
                     }
                 }
                 break;
                 case CUPTI_CBID_RESOURCE_CONTEXT_DESTROY_STARTING:
                 {
                     DEBUG_LOG("Injection - Context destroy starting");
-                    std::map<CUcontext, ContextInfo*>::iterator itr;
-                    g_contextInfoMutex.lock();
-                    itr = g_contextInfoMap.find(resourceData->context);
-                    if (itr == g_contextInfoMap.end())
-                    {
-                        std::cout << "Warning : This context not found in map of context which enabled PC sampling." << std::endl;
+                    if (!GetProfilerConf()->noSampling) {
+                        std::map<CUcontext, ContextInfo*>::iterator itr;
+                        g_contextInfoMutex.lock();
+                        itr = g_contextInfoMap.find(resourceData->context);
+                        if (itr == g_contextInfoMap.end())
+                        {
+                            std::cout << "Warning : This context not found in map of context which enabled PC sampling." << std::endl;
+                        }
+                        g_contextInfoMutex.unlock();
+
+                        CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
+                        pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
+                        pcSamplingGetDataParams.ctx = itr->first;
+
+                        while (itr->second->pcSamplingData.remainingNumPcs > 0 || itr->second->pcSamplingData.totalNumPcs > 0)
+                        {
+                            GetPcSamplingDataFromCupti(pcSamplingGetDataParams, itr->second);
+                        }
+
+                        CUpti_PCSamplingDisableParams pcSamplingDisableParams = {};
+                        pcSamplingDisableParams.size = CUpti_PCSamplingDisableParamsSize;
+                        pcSamplingDisableParams.ctx = resourceData->context;
+                        CUPTI_CALL(cuptiPCSamplingDisable(&pcSamplingDisableParams));
+
+                        // It is quite possible that after pc sampling disabled cupti fill remaining records
+                        // collected lately from hardware in provided buffer during configuration.
+                        if (itr->second->pcSamplingData.totalNumPcs > 0)
+                        {
+                            g_pcSampDataQueueMutex.lock();
+                            g_pcSampDataQueue.push(std::make_pair(&itr->second->pcSamplingData, itr->second));
+                            g_pcSampDataQueueMutex.unlock();
+                        }
+
+                        g_contextInfoMutex.lock();
+                        g_contextInfoToFreeInEndVector.push_back(itr->second);
+                        g_contextInfoMap.erase(itr);
+                        g_contextInfoMutex.unlock();
                     }
-                    g_contextInfoMutex.unlock();
-
-                    CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
-                    pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
-                    pcSamplingGetDataParams.ctx = itr->first;
-
-                    while (itr->second->pcSamplingData.remainingNumPcs > 0 || itr->second->pcSamplingData.totalNumPcs > 0)
-                    {
-                        GetPcSamplingDataFromCupti(pcSamplingGetDataParams, itr->second);
-                    }
-
-                    CUpti_PCSamplingDisableParams pcSamplingDisableParams = {};
-                    pcSamplingDisableParams.size = CUpti_PCSamplingDisableParamsSize;
-                    pcSamplingDisableParams.ctx = resourceData->context;
-                    CUPTI_CALL(cuptiPCSamplingDisable(&pcSamplingDisableParams));
-
-                    // It is quite possible that after pc sampling disabled cupti fill remaining records
-                    // collected lately from hardware in provided buffer during configuration.
-                    if (itr->second->pcSamplingData.totalNumPcs > 0)
-                    {
-                        g_pcSampDataQueueMutex.lock();
-                        g_pcSampDataQueue.push(std::make_pair(&itr->second->pcSamplingData, itr->second));
-                        g_pcSampDataQueueMutex.unlock();
-                    }
-
-                    g_contextInfoMutex.lock();
-                    g_contextInfoToFreeInEndVector.push_back(itr->second);
-                    g_contextInfoMap.erase(itr);
-                    g_contextInfoMutex.unlock();
                 }
                 break;
                 case CUPTI_CBID_RESOURCE_MODULE_LOADED:
@@ -1005,30 +1014,32 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
                     CUpti_ResourceData* resourceData = (CUpti_ResourceData*)cbdata;
                     DumpCudaModule(cbid, resourceData->resourceDescriptor);
                     #endif
-                    g_contextInfoMutex.lock();
-                    std::map<CUcontext, ContextInfo*>::iterator contextStateMapItr = g_contextInfoMap.find(resourceData->context);
-                    if (contextStateMapItr == g_contextInfoMap.end())
-                    {
-                        std::cout << "Error : Context not found in map" << std::endl;
-                        exit(-1);
-                    }
-                    g_contextInfoMutex.unlock();
-                    // Get PC sampling data from cupti for each range. In such case records will get filled in provided buffer during configuration.
-                    // It is recommend to collect those record using cuptiPCSamplingGetData() API.
-                    // If module get unloaded then afterwards records will belong to a new range.
-                    CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
-                    pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
-                    pcSamplingGetDataParams.ctx = resourceData->context;
+                    if (!GetProfilerConf()->noSampling) {
+                        g_contextInfoMutex.lock();
+                        std::map<CUcontext, ContextInfo*>::iterator contextStateMapItr = g_contextInfoMap.find(resourceData->context);
+                        if (contextStateMapItr == g_contextInfoMap.end())
+                        {
+                            std::cout << "Error : Context not found in map" << std::endl;
+                            exit(-1);
+                        }
+                        g_contextInfoMutex.unlock();
+                        // Get PC sampling data from cupti for each range. In such case records will get filled in provided buffer during configuration.
+                        // It is recommend to collect those record using cuptiPCSamplingGetData() API.
+                        // If module get unloaded then afterwards records will belong to a new range.
+                        CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
+                        pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
+                        pcSamplingGetDataParams.ctx = resourceData->context;
 
-                    // collect all records filled in provided buffer during configuration.
-                    while (contextStateMapItr->second->pcSamplingData.totalNumPcs > 0)
-                    {
-                        GetPcSamplingDataFromCupti(pcSamplingGetDataParams, contextStateMapItr->second);
-                    }
-                    // collect if any extra records which could not accommodated in provided buffer during configuration.
-                    while (contextStateMapItr->second->pcSamplingData.remainingNumPcs > 0)
-                    {
-                        GetPcSamplingDataFromCupti(pcSamplingGetDataParams, contextStateMapItr->second);
+                        // collect all records filled in provided buffer during configuration.
+                        while (contextStateMapItr->second->pcSamplingData.totalNumPcs > 0)
+                        {
+                            GetPcSamplingDataFromCupti(pcSamplingGetDataParams, contextStateMapItr->second);
+                        }
+                        // collect if any extra records which could not accommodated in provided buffer during configuration.
+                        while (contextStateMapItr->second->pcSamplingData.remainingNumPcs > 0)
+                        {
+                            GetPcSamplingDataFromCupti(pcSamplingGetDataParams, contextStateMapItr->second);
+                        }
                     }
                 }
                 break;
