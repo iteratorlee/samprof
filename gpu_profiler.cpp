@@ -748,6 +748,9 @@ void AtExitHandler()
 
     if (GetProfilerConf()->noRPC) {
         g_cpuSamplerCollection->DisableSampling();
+        if (g_cpuSamplerThreadHandle.joinable()) {
+            g_cpuSamplerThreadHandle.join();
+        }
         if (g_rpcReplyCopyThreadHandle.joinable()) {
             g_rpcReplyCopyThreadHandle.join();
         }
@@ -1297,6 +1300,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack) {
 
     // false: no need to update cct
     // true: there are nodes to insert
+    // TODO: update the sample count
     bool flag = false;
     for (i = callStack.depth - 1; i >= 0; --i) {
         if (callStack.fnames[i].length() == 0 || HasExcludePatterns(callStack.fnames[i])) {
@@ -1405,6 +1409,7 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
 
         // enable cpu call stack sampling
         g_cpuSamplerCollection->EnableSampling();
+        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
 
         if (request->duration() > 0)
         {
@@ -1438,6 +1443,11 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
         } else {
             RPCCopyTracingData(reply);
         }
+
+        if (g_cpuSamplerThreadHandle.joinable()) {
+            g_cpuSamplerThreadHandle.join();
+        }
+
         CopyCPUCCT2ProtoCPUCCTV2(reply);
         reply->set_message("pc sampling completed");
         rpcTimer->stop();
@@ -1500,6 +1510,7 @@ extern "C" int InitializeInjection(void)
         if (!GetProfilerConf()->noSampling) {
             g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
         }
+        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
     } else {
         g_rpcServerThreadHandle = std::thread(RunServer);
     }

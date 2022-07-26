@@ -150,6 +150,7 @@ std::unordered_map<uint64_t, uint64_t> g_esp2pcIdMap;
 std::stack<UNWValue> g_callStack;
 bool g_genCallStack = false;
 CPUCallStackSamplerCollection* g_cpuSamplerCollection;
+std::thread g_cpuSamplerThreadHandle;
 
 // Variables related to initialize injection once.
 bool g_initializedInjection = false;
