@@ -96,7 +96,7 @@ public:
     // event-driven cpu cct contruction configurations
     bool fakeBT = false;
     bool doCPUCallStackUnwinding = true;
-    bool pruneCCT = true;
+    bool pruneCCT = false;
     bool checkRSP = true;
     bool syncBeforeStart = false;
     bool backTraceVerbose = false;
