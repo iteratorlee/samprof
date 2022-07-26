@@ -747,9 +747,11 @@ void AtExitHandler()
     }
 
     if (GetProfilerConf()->noRPC) {
-        g_cpuSamplerCollection->DisableSampling();
-        if (g_cpuSamplerThreadHandle.joinable()) {
-            g_cpuSamplerThreadHandle.join();
+        if (GetProfilerConf()->enableCPUSampling) {
+            g_cpuSamplerCollection->DisableSampling();
+            if (g_cpuSamplerThreadHandle.joinable()) {
+                g_cpuSamplerThreadHandle.join();
+            }
         }
         if (g_rpcReplyCopyThreadHandle.joinable()) {
             g_rpcReplyCopyThreadHandle.join();
@@ -1408,8 +1410,10 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
         }
 
         // enable cpu call stack sampling
-        g_cpuSamplerCollection->EnableSampling();
-        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+        if (GetProfilerConf()->enableCPUSampling) {
+            g_cpuSamplerCollection->EnableSampling();
+            g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+        }
 
         if (request->duration() > 0)
         {
@@ -1422,7 +1426,9 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
         }
 
         // disable cpu call stack sampling
-        g_cpuSamplerCollection->DisableSampling();
+        if (GetProfilerConf()->enableCPUSampling) {
+            g_cpuSamplerCollection->DisableSampling();
+        }
 
         if (GetProfilerConf()->noSampling) {
             g_tracingStarted = false;
@@ -1444,8 +1450,10 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
             RPCCopyTracingData(reply);
         }
 
-        if (g_cpuSamplerThreadHandle.joinable()) {
-            g_cpuSamplerThreadHandle.join();
+        if (GetProfilerConf()->enableCPUSampling) {
+            if (g_cpuSamplerThreadHandle.joinable()) {
+                g_cpuSamplerThreadHandle.join();
+            }
         }
 
         CopyCPUCCT2ProtoCPUCCTV2(reply);
@@ -1510,7 +1518,9 @@ extern "C" int InitializeInjection(void)
         if (!GetProfilerConf()->noSampling) {
             g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
         }
-        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+        if (GetProfilerConf()->enableCPUSampling) {
+            g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+        }
     } else {
         g_rpcServerThreadHandle = std::thread(RunServer);
     }

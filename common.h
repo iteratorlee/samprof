@@ -103,6 +103,7 @@ public:
     bool doPyUnwinding = false;
     bool noRPC = false;
     bool noSampling = false;
+    bool enableCPUSampling = false;
     
     std::string backEnd = "TORCH";
     std::string pyFileName = "main.py";
@@ -133,7 +134,8 @@ public:
         std::cout << "backtrace verbose            : " << backTraceVerbose << std::endl;
         std::cout << "do py unwinding              : " << doPyUnwinding << std::endl;
         std::cout << "no RPC                       : " << noRPC << std::endl;
-        std::cout << "no Sampling                  : " << noSampling << std::endl;
+        std::cout << "no GPU Sampling              : " << noSampling << std::endl;
+        std::cout << "enable CPU sampling          : " << enableCPUSampling << std::endl;
 
         std::cout << "dl backend                   : " << backEnd << std::endl;
         std::cout << "python file name             : " << pyFileName << std::endl;
@@ -204,6 +206,9 @@ private:
         }
         if ((s = getenv("NO_SAMPLING")) != nullptr) {
             noSampling = std::strtol(s, nullptr, 10);
+        }
+        if ((s = getenv("ENABLE_CPU_SAMPLING")) != nullptr) {
+            enableCPUSampling = std::strtol(s, nullptr, 10);
         }
         if ((s = getenv("CPU_SAMPLING_PERIOD")) != nullptr) {
             cpuSamplingPeriod = std::strtoul(s, nullptr, 10);
