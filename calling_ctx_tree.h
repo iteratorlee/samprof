@@ -26,7 +26,9 @@ typedef enum {
 
 typedef enum {
 	CCTNODE_TYPE_CXX = 0,
-	CCTNODE_TYPE_PY = 1
+	CCTNODE_TYPE_PY = 1,
+	// py nodes found by cpu sampler, post-process it in callback-based unwinding
+	CCTNODE_TYPE_C2P = 2
 } CCTNodeType;
 
 class CPUCCTNode {

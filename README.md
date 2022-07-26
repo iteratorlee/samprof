@@ -74,6 +74,6 @@ In the offline mode, Samprof extracts all the loaded modules to cubin files at r
 # Build the cubin analyzer
 make cubin_tool
 ```
-`cubin_tool` analyzes the calling relations between CUDA functions via analyzing the assembly code of cubins. Running `./cubin_tool <cubin path> <cubin call graph path>` would analyze all the cubin files in `<cubin path>` and save the analysis results to `<cubin call graph path>`. Call graph files are named as `<cubin crc>.pb.gz`. The proto of CUDA call graph is defined in [gpu_profiling.proto](https://code.byted.org/inf/gpu_profiler/blob/master/protos/gpu_profiling.proto).
+`cubin_tool` analyzes the calling relations between CUDA functions via analyzing the assembly code of cubins. Running `./cubin_tool <cubin path> <cubin call graph path>` would analyze all the cubin files in `<cubin path>` and save the analysis results to `<cubin call graph path>`. Call graph files are named as `<cubin crc>.pb.gz`. The proto of CUDA call graph is defined in [gpu_profiling.proto](https://github.com/iteratorlee/samprof/blob/master/protos/gpu_profiling.proto).
 
 Via setting the `PRINTGRAPH` macro to `true`, you could print all the call graph files by running `./cubin_tool <cubin call graph path>`

@@ -236,7 +236,18 @@ static void DoBackTrace(bool verbose=false) {
         UNWValue value;
         TOP2(toInsertUNWMain, toInsertUNW, value);
         CPUCCTNode* childNode = parentNode->getChildbyPC(value.pc);
+        //TODO if finding a CXX node with _PyEval_EvalFrameDefault
+        //     replace it with PY node
         if (childNode) {
+            if (childNode->nodeType == CCTNODE_TYPE_C2P) {
+                if (value.nodeType == CCTNODE_TYPE_PY) {
+                    childNode->nodeType = CCTNODE_TYPE_PY;
+                    childNode->funcName = value.funcName;
+                    DEBUG_LOG("py node renamed in unwinding: %s\n", value.funcName.c_str());
+                } else {
+                    DEBUG_LOG("wrong cct node type matching: %d/%d\n", childNode->nodeType, value.nodeType);
+                }
+            }
             parentNode = childNode;
             POP2(toInsertUNWMain, toInsertUNW);
         } else {
@@ -1256,8 +1267,9 @@ void stopPCThreadSyncHandler(int signum) {
     }
 }
 
-void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack callStack) {
+void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack) {
     pthread_t tid = g_pidt2pthreadt[pid];
+    // maintaining a seperate CCT for each CPU thread
     if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
         DEBUG_LOG("new CCT, tid=%d\n", gettid());
         CPUCCT* newCCT = new CPUCCT();
@@ -1282,11 +1294,12 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack callStack) {
 
     auto parentNode = cpuCCT->root;
     int i;
+
+    // false: no need to update cct
+    // true: there are nodes to insert
+    bool flag = false;
     for (i = callStack.depth - 1; i >= 0; --i) {
-        if (callStack.fnames[i].length() == 0) {
-            break;
-        }
-        if (HasExcludePatterns(callStack.fnames[i])) {
+        if (callStack.fnames[i].length() == 0 || HasExcludePatterns(callStack.fnames[i])) {
             break;
         }
         std::string funcName = callStack.fnames[i];
@@ -1296,7 +1309,31 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack callStack) {
         if (childNode) {
             parentNode = childNode;
         } else {
+            flag = true;
             break;
+        }
+    }
+
+    if (flag) {
+        for (int j = i; j >= 0; --j) {
+            if (callStack.fnames[j].length() == 0 || HasExcludePatterns(callStack.fnames[j])) {
+                break;
+            }
+            std::string funcName = callStack.fnames[j];
+            uint64_t pc = callStack.pcs[j];
+            CPUCCTNode* newNode = new CPUCCTNode();
+            newNode->funcName = funcName;
+            newNode->pc = pc;
+            newNode->offset = 0;
+            if (funcName.find("_PyEval_EvalFrameDefault") == std::string::npos) {
+                newNode->nodeType = CCTNODE_TYPE_CXX;
+            } else {
+                // this is a potential py node
+                newNode->nodeType = CCTNODE_TYPE_C2P;
+            }
+
+            cpuCCT->insertNode(parentNode, newNode);
+            parentNode = newNode;
         }
     }
 }
