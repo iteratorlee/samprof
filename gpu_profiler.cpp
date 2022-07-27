@@ -964,7 +964,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
                             pcSamplingEnableParams.size = CUpti_PCSamplingEnableParamsSize;
                             pcSamplingEnableParams.ctx = resourceData->context;
                             CUPTI_CALL(cuptiPCSamplingEnable(&pcSamplingEnableParams));
- 
+
                             ConfigureActivity(resourceData->context);
 
                             g_circularBufferMutex.lock();
