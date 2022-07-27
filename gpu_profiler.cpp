@@ -1131,7 +1131,8 @@ static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
             pcSampDataProto->set_totalnumpcs(pcSampData->totalNumPcs);
             pcSampDataProto->set_remainingnumpcs(pcSampData->remainingNumPcs);
             pcSampDataProto->set_rangeid(pcSampData->rangeId);
-            pcSampDataProto->set_nonusrkernelstotalsamples(pcSampData->nonUsrKernelsTotalSamples);
+            // pcSampDataProto->set_nonusrkernelstotalsamples(pcSampData->nonUsrKernelsTotalSamples);
+            pcSampDataProto->set_nonusrkernelstotalsamples(0);
             
             for (int i = 0; i < pcSampData->totalNumPcs; ++i) {
                 gpuprofiling::CUptiPCSamplingPCData* pcDataProto = pcSampDataProto->add_ppcdata();
