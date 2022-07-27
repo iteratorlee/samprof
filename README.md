@@ -9,9 +9,15 @@ Please refer to [gRPC-C++ Quick Start](https://grpc.io/docs/languages/cpp/quicks
 ### 1.2 Install other dependencies
 ```bash
 # you may choose the proper version of libpython-dev according to your already installed python
-apt install libunwind8-dev libssl-dev libpython3.8-dev
+sudo apt install libunwind8-dev libssl-dev libpython3.8-dev
 ```
-### 1.3 Configuring
+### 1.3 Visualization tools
+To visualize the profiling results, please install pprof and graphviz.
+```bash
+go install github.com/google/pprof@latest
+sudo apt install graphviz
+```
+### 1.4 Configuring
 ```bash
 # Make sure CUDA lib path and grpc lib path have been appended to LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/cuda/lib64:/path/to/grpc/lib
@@ -44,13 +50,13 @@ Samprof-defined environment variables are listed in the following table:
 
 We provide a helper script `run.sh`. Configure the environments according to your needs. Then running `bash run.sh` would work.
 
-If `NO_RPC` is set to **0**, a profiler RPC server would be started at `0.0.0.0:8886` by default. An RPC client is provided in the `bins` directory. Running `./gpu_profiler_client --duration 2000` would issue a two seconds profiling request to `localhost:8886` and perform analysis on the response.
+If `NO_RPC` is set to **0**, a profiler RPC server would be started at `0.0.0.0:8886` by default. An RPC client is provided in the `bin` directory. Running `./samprof-client --duration 2000` would issue a two seconds profiling request to `localhost:8886` and perform analysis on the response.
 
-If `NO_RPC` is set to **1**, the profiling result would be dumped to an intermediate file (indicated by `DUMP_FN`). In this case, running `./gpu_profiler_client --pbfn $DUMP_FN` for further analysis.
+If `NO_RPC` is set to **1**, the profiling result would be dumped to an intermediate file (indicated by `DUMP_FN`). In this case, running `./samprof-client --pbfn $DUMP_FN` for further analysis.
 
 After running the client successfully, the analysis results would be saved in `profiler.pb.gz`. Running `pprof -http=0.0.0.0:<port> --trim=false --call_tree ./profiler.pb.gz` would start a pprof web server at `0.0.0.0:<port>` which you can visit via a web browser. In case that the call graph is too large, your could run `pprof -pdf --trim=false --call_tree ./profiler.pb.gz >> profile.pdf` to save the call graph to a pdf file.
 
-If you want to customize the parameters, just run `./gpu_profiler_client -h` for the help information.
+If you want to customize the parameters, just run `./samprof-client -h` for the help information.
 
 ## 4. Tools
 
