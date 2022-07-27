@@ -196,7 +196,7 @@ static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_gpu_5fprofiling_2ep
 static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_gpu_5fprofiling_2eproto = nullptr;
 static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_gpu_5fprofiling_2eproto = nullptr;
 
-const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_gpu_5fprofiling_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+const uint32_t TableStruct_gpu_5fprofiling_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextTree_NodeMapEntry_DoNotUse, _has_bits_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextTree_NodeMapEntry_DoNotUse, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -460,7 +460,7 @@ CPUCallingContextTree::CPUCallingContextTree(const CPUCallingContextTree& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.CPUCallingContextTree)
 }
 
-void CPUCallingContextTree::SharedCtor() {
+inline void CPUCallingContextTree::SharedCtor() {
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&root_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&rootid_) -
@@ -495,7 +495,7 @@ void CPUCallingContextTree::SetCachedSize(int size) const {
 
 void CPUCallingContextTree::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.CPUCallingContextTree)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -513,12 +513,12 @@ void CPUCallingContextTree::Clear() {
 const char* CPUCallingContextTree::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // .gpuprofiling.CPUCallingContextNode root = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_root(), ptr);
           CHK_(ptr);
         } else
@@ -526,7 +526,7 @@ const char* CPUCallingContextTree::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 rootPC = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           rootpc_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -534,7 +534,7 @@ const char* CPUCallingContextTree::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 rootID = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           rootid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -542,7 +542,7 @@ const char* CPUCallingContextTree::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // map<int64, .gpuprofiling.CPUCallingContextNode> nodeMap = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -576,10 +576,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* CPUCallingContextTree::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* CPUCallingContextTree::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.CPUCallingContextTree)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // .gpuprofiling.CPUCallingContextNode root = 1;
@@ -604,18 +604,18 @@ failure:
 
   // map<int64, .gpuprofiling.CPUCallingContextNode> nodeMap = 4;
   if (!this->_internal_nodemap().empty()) {
-    typedef ::PROTOBUF_NAMESPACE_ID::Map< ::PROTOBUF_NAMESPACE_ID::int64, ::gpuprofiling::CPUCallingContextNode >::const_pointer
+    typedef ::PROTOBUF_NAMESPACE_ID::Map< int64_t, ::gpuprofiling::CPUCallingContextNode >::const_pointer
         ConstPtr;
-    typedef ::PROTOBUF_NAMESPACE_ID::internal::SortItem< ::PROTOBUF_NAMESPACE_ID::int64, ConstPtr > SortItem;
+    typedef ::PROTOBUF_NAMESPACE_ID::internal::SortItem< int64_t, ConstPtr > SortItem;
     typedef ::PROTOBUF_NAMESPACE_ID::internal::CompareByFirstField<SortItem> Less;
 
     if (stream->IsSerializationDeterministic() &&
         this->_internal_nodemap().size() > 1) {
       ::std::unique_ptr<SortItem[]> items(
           new SortItem[this->_internal_nodemap().size()]);
-      typedef ::PROTOBUF_NAMESPACE_ID::Map< ::PROTOBUF_NAMESPACE_ID::int64, ::gpuprofiling::CPUCallingContextNode >::size_type size_type;
+      typedef ::PROTOBUF_NAMESPACE_ID::Map< int64_t, ::gpuprofiling::CPUCallingContextNode >::size_type size_type;
       size_type n = 0;
-      for (::PROTOBUF_NAMESPACE_ID::Map< ::PROTOBUF_NAMESPACE_ID::int64, ::gpuprofiling::CPUCallingContextNode >::const_iterator
+      for (::PROTOBUF_NAMESPACE_ID::Map< int64_t, ::gpuprofiling::CPUCallingContextNode >::const_iterator
           it = this->_internal_nodemap().begin();
           it != this->_internal_nodemap().end(); ++it, ++n) {
         items[static_cast<ptrdiff_t>(n)] = SortItem(&*it);
@@ -625,7 +625,7 @@ failure:
         target = CPUCallingContextTree_NodeMapEntry_DoNotUse::Funcs::InternalSerialize(4, items[static_cast<ptrdiff_t>(i)].second->first, items[static_cast<ptrdiff_t>(i)].second->second, target, stream);
       }
     } else {
-      for (::PROTOBUF_NAMESPACE_ID::Map< ::PROTOBUF_NAMESPACE_ID::int64, ::gpuprofiling::CPUCallingContextNode >::const_iterator
+      for (::PROTOBUF_NAMESPACE_ID::Map< int64_t, ::gpuprofiling::CPUCallingContextNode >::const_iterator
           it = this->_internal_nodemap().begin();
           it != this->_internal_nodemap().end(); ++it) {
         target = CPUCallingContextTree_NodeMapEntry_DoNotUse::Funcs::InternalSerialize(4, it->first, it->second, target, stream);
@@ -645,14 +645,14 @@ size_t CPUCallingContextTree::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.CPUCallingContextTree)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // map<int64, .gpuprofiling.CPUCallingContextNode> nodeMap = 4;
   total_size += 1 *
       ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(this->_internal_nodemap_size());
-  for (::PROTOBUF_NAMESPACE_ID::Map< ::PROTOBUF_NAMESPACE_ID::int64, ::gpuprofiling::CPUCallingContextNode >::const_iterator
+  for (::PROTOBUF_NAMESPACE_ID::Map< int64_t, ::gpuprofiling::CPUCallingContextNode >::const_iterator
       it = this->_internal_nodemap().begin();
       it != this->_internal_nodemap().end(); ++it) {
     total_size += CPUCallingContextTree_NodeMapEntry_DoNotUse::Funcs::ByteSizeLong(it->first, it->second);
@@ -694,7 +694,7 @@ void CPUCallingContextTree::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void CPUCallingContextTree::MergeFrom(const CPUCallingContextTree& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.CPUCallingContextTree)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   nodemap_.MergeFrom(from.nodemap_);
@@ -764,6 +764,9 @@ CPUCallingContextNode::CPUCallingContextNode(const CPUCallingContextNode& from)
       childpcs_(from.childpcs_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   funcname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    funcname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_funcname().empty()) {
     funcname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_funcname(), 
       GetArenaForAllocation());
@@ -774,8 +777,11 @@ CPUCallingContextNode::CPUCallingContextNode(const CPUCallingContextNode& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.CPUCallingContextNode)
 }
 
-void CPUCallingContextNode::SharedCtor() {
+inline void CPUCallingContextNode::SharedCtor() {
 funcname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  funcname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&id_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&parentpc_) -
@@ -806,7 +812,7 @@ void CPUCallingContextNode::SetCachedSize(int size) const {
 
 void CPUCallingContextNode::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.CPUCallingContextNode)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -823,12 +829,12 @@ void CPUCallingContextNode::Clear() {
 const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint64 id = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           id_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -836,7 +842,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 pc = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           pc_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -844,7 +850,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 offset = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           offset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -852,7 +858,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // string funcName = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           auto str = _internal_mutable_funcname();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.CPUCallingContextNode.funcName"));
@@ -862,7 +868,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 parentID = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           parentid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -870,7 +876,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 parentPC = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 48)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
           parentpc_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -878,7 +884,7 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // repeated .gpuprofiling.CPUCallingContextNode childs = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -891,10 +897,10 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // repeated uint64 childIDs = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_childids(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 64) {
+        } else if (static_cast<uint8_t>(tag) == 64) {
           _internal_add_childids(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
         } else
@@ -902,10 +908,10 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // repeated uint64 childPCs = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 74)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_childpcs(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 72) {
+        } else if (static_cast<uint8_t>(tag) == 72) {
           _internal_add_childpcs(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
         } else
@@ -934,10 +940,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* CPUCallingContextNode::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* CPUCallingContextNode::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.CPUCallingContextNode)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint64 id = 1;
@@ -1018,7 +1024,7 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.CPUCallingContextNode)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1036,7 +1042,7 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
     if (data_size > 0) {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+            static_cast<int32_t>(data_size));
     }
     int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
     _childids_cached_byte_size_.store(cached_size,
@@ -1051,7 +1057,7 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
     if (data_size > 0) {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+            static_cast<int32_t>(data_size));
     }
     int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(data_size);
     _childpcs_cached_byte_size_.store(cached_size,
@@ -1110,7 +1116,7 @@ void CPUCallingContextNode::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void CPUCallingContextNode::MergeFrom(const CPUCallingContextNode& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.CPUCallingContextNode)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   childs_.MergeFrom(from.childs_);
@@ -1194,6 +1200,9 @@ GPUCallingGraphNode::GPUCallingGraphNode(const GPUCallingGraphNode& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   funcname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    funcname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_funcname().empty()) {
     funcname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_funcname(), 
       GetArenaForAllocation());
@@ -1204,8 +1213,11 @@ GPUCallingGraphNode::GPUCallingGraphNode(const GPUCallingGraphNode& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.GPUCallingGraphNode)
 }
 
-void GPUCallingGraphNode::SharedCtor() {
+inline void GPUCallingGraphNode::SharedCtor() {
 funcname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  funcname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&cubincrc_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&weight_) -
@@ -1236,7 +1248,7 @@ void GPUCallingGraphNode::SetCachedSize(int size) const {
 
 void GPUCallingGraphNode::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.GPUCallingGraphNode)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1250,12 +1262,12 @@ void GPUCallingGraphNode::Clear() {
 const char* GPUCallingGraphNode::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint64 cubinCrc = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           cubincrc_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1263,7 +1275,7 @@ const char* GPUCallingGraphNode::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // string funcName = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_funcname();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.GPUCallingGraphNode.funcName"));
@@ -1273,7 +1285,7 @@ const char* GPUCallingGraphNode::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 addrBegin = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           addrbegin_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1281,7 +1293,7 @@ const char* GPUCallingGraphNode::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 addrEnd = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           addrend_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1289,7 +1301,7 @@ const char* GPUCallingGraphNode::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 weight = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           weight_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1318,10 +1330,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* GPUCallingGraphNode::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* GPUCallingGraphNode::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.GPUCallingGraphNode)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint64 cubinCrc = 1;
@@ -1370,7 +1382,7 @@ size_t GPUCallingGraphNode::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.GPUCallingGraphNode)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1420,7 +1432,7 @@ void GPUCallingGraphNode::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void GPUCallingGraphNode::MergeFrom(const GPUCallingGraphNode& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.GPUCallingGraphNode)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (!from._internal_funcname().empty()) {
@@ -1495,11 +1507,17 @@ GPUCallingGraphEdge::GPUCallingGraphEdge(const GPUCallingGraphEdge& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   srcfuncname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    srcfuncname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_srcfuncname().empty()) {
     srcfuncname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_srcfuncname(), 
       GetArenaForAllocation());
   }
   dstfuncname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    dstfuncname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_dstfuncname().empty()) {
     dstfuncname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_dstfuncname(), 
       GetArenaForAllocation());
@@ -1510,9 +1528,15 @@ GPUCallingGraphEdge::GPUCallingGraphEdge(const GPUCallingGraphEdge& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.GPUCallingGraphEdge)
 }
 
-void GPUCallingGraphEdge::SharedCtor() {
+inline void GPUCallingGraphEdge::SharedCtor() {
 srcfuncname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  srcfuncname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 dstfuncname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  dstfuncname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&srcpcoffset_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&weight_) -
@@ -1544,7 +1568,7 @@ void GPUCallingGraphEdge::SetCachedSize(int size) const {
 
 void GPUCallingGraphEdge::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.GPUCallingGraphEdge)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1559,12 +1583,12 @@ void GPUCallingGraphEdge::Clear() {
 const char* GPUCallingGraphEdge::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // string srcFuncName = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_srcfuncname();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.GPUCallingGraphEdge.srcFuncName"));
@@ -1574,7 +1598,7 @@ const char* GPUCallingGraphEdge::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 srcPCOffset = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           srcpcoffset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1582,7 +1606,7 @@ const char* GPUCallingGraphEdge::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // string dstFuncName = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_dstfuncname();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.GPUCallingGraphEdge.dstFuncName"));
@@ -1592,7 +1616,7 @@ const char* GPUCallingGraphEdge::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 dstPCOffset = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           dstpcoffset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1600,7 +1624,7 @@ const char* GPUCallingGraphEdge::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 weight = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           weight_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -1629,10 +1653,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* GPUCallingGraphEdge::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* GPUCallingGraphEdge::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.GPUCallingGraphEdge)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // string srcFuncName = 1;
@@ -1685,7 +1709,7 @@ size_t GPUCallingGraphEdge::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.GPUCallingGraphEdge)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1737,7 +1761,7 @@ void GPUCallingGraphEdge::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void GPUCallingGraphEdge::MergeFrom(const GPUCallingGraphEdge& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.GPUCallingGraphEdge)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (!from._internal_srcfuncname().empty()) {
@@ -1823,7 +1847,7 @@ GPUCallingGraph::GPUCallingGraph(const GPUCallingGraph& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.GPUCallingGraph)
 }
 
-void GPUCallingGraph::SharedCtor() {
+inline void GPUCallingGraph::SharedCtor() {
 }
 
 GPUCallingGraph::~GPUCallingGraph() {
@@ -1849,7 +1873,7 @@ void GPUCallingGraph::SetCachedSize(int size) const {
 
 void GPUCallingGraph::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.GPUCallingGraph)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1861,12 +1885,12 @@ void GPUCallingGraph::Clear() {
 const char* GPUCallingGraph::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // repeated .gpuprofiling.GPUCallingGraphNode nodes = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1879,7 +1903,7 @@ const char* GPUCallingGraph::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPAC
         continue;
       // repeated .gpuprofiling.GPUCallingGraphEdge edges = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1913,10 +1937,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* GPUCallingGraph::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* GPUCallingGraph::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.GPUCallingGraph)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated .gpuprofiling.GPUCallingGraphNode nodes = 1;
@@ -1947,7 +1971,7 @@ size_t GPUCallingGraph::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.GPUCallingGraph)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1984,7 +2008,7 @@ void GPUCallingGraph::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void GPUCallingGraph::MergeFrom(const GPUCallingGraph& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.GPUCallingGraph)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   nodes_.MergeFrom(from.nodes_);
@@ -2040,7 +2064,7 @@ PCSamplingStallReason::PCSamplingStallReason(const PCSamplingStallReason& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.PCSamplingStallReason)
 }
 
-void PCSamplingStallReason::SharedCtor() {
+inline void PCSamplingStallReason::SharedCtor() {
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&pcsamplingstallreasonindex_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&samples_) -
@@ -2070,7 +2094,7 @@ void PCSamplingStallReason::SetCachedSize(int size) const {
 
 void PCSamplingStallReason::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.PCSamplingStallReason)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2083,12 +2107,12 @@ void PCSamplingStallReason::Clear() {
 const char* PCSamplingStallReason::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint32 pcSamplingStallReasonIndex = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           pcsamplingstallreasonindex_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2096,7 +2120,7 @@ const char* PCSamplingStallReason::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint32 samples = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           samples_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2125,10 +2149,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* PCSamplingStallReason::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* PCSamplingStallReason::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.PCSamplingStallReason)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint32 pcSamplingStallReasonIndex = 1;
@@ -2155,7 +2179,7 @@ size_t PCSamplingStallReason::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.PCSamplingStallReason)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2188,7 +2212,7 @@ void PCSamplingStallReason::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void PCSamplingStallReason::MergeFrom(const PCSamplingStallReason& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.PCSamplingStallReason)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (from._internal_pcsamplingstallreasonindex() != 0) {
@@ -2249,6 +2273,9 @@ CUptiPCSamplingPCData::CUptiPCSamplingPCData(const CUptiPCSamplingPCData& from)
       stallreason_(from.stallreason_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   functionname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    functionname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_functionname().empty()) {
     functionname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_functionname(), 
       GetArenaForAllocation());
@@ -2259,8 +2286,11 @@ CUptiPCSamplingPCData::CUptiPCSamplingPCData(const CUptiPCSamplingPCData& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.CUptiPCSamplingPCData)
 }
 
-void CUptiPCSamplingPCData::SharedCtor() {
+inline void CUptiPCSamplingPCData::SharedCtor() {
 functionname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  functionname_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&cubincrc_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&correlationid_) -
@@ -2291,7 +2321,7 @@ void CUptiPCSamplingPCData::SetCachedSize(int size) const {
 
 void CUptiPCSamplingPCData::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.CUptiPCSamplingPCData)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2306,12 +2336,12 @@ void CUptiPCSamplingPCData::Clear() {
 const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint32 size = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2319,7 +2349,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 cubinCrc = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           cubincrc_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2327,7 +2357,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint64 pcOffset = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           pcoffset_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2335,7 +2365,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint32 functionIndex = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           functionindex_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2343,7 +2373,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint32 pad = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           pad_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2351,7 +2381,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // string functionName = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
           auto str = _internal_mutable_functionname();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.CUptiPCSamplingPCData.functionName"));
@@ -2361,7 +2391,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint32 stallReasonCount = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 56)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
           stallreasoncount_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2369,7 +2399,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // repeated .gpuprofiling.PCSamplingStallReason stallReason = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2382,7 +2412,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // int64 parentCPUPCID = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 72)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 72)) {
           parentcpupcid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2390,7 +2420,7 @@ const char* CUptiPCSamplingPCData::_InternalParse(const char* ptr, ::PROTOBUF_NA
         continue;
       // uint32 correlationId = 10;
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 80)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 80)) {
           correlationid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2419,10 +2449,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* CUptiPCSamplingPCData::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* CUptiPCSamplingPCData::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.CUptiPCSamplingPCData)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint32 size = 1;
@@ -2503,7 +2533,7 @@ size_t CUptiPCSamplingPCData::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.CUptiPCSamplingPCData)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2580,7 +2610,7 @@ void CUptiPCSamplingPCData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void CUptiPCSamplingPCData::MergeFrom(const CUptiPCSamplingPCData& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.CUptiPCSamplingPCData)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   stallreason_.MergeFrom(from.stallreason_);
@@ -2676,7 +2706,7 @@ CUptiPCSamplingData::CUptiPCSamplingData(const CUptiPCSamplingData& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.CUptiPCSamplingData)
 }
 
-void CUptiPCSamplingData::SharedCtor() {
+inline void CUptiPCSamplingData::SharedCtor() {
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&size_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&nonusrkernelstotalsamples_) -
@@ -2706,7 +2736,7 @@ void CUptiPCSamplingData::SetCachedSize(int size) const {
 
 void CUptiPCSamplingData::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.CUptiPCSamplingData)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2720,12 +2750,12 @@ void CUptiPCSamplingData::Clear() {
 const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint32 size = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2733,7 +2763,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint32 collectNumPcs = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           collectnumpcs_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2741,7 +2771,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 totalSamples = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
           totalsamples_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2749,7 +2779,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 droppedSamples = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 32)) {
           droppedsamples_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2757,7 +2787,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint32 totalNumPcs = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
           totalnumpcs_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2765,7 +2795,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint32 remainingNumPcs = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 48)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 48)) {
           remainingnumpcs_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -2773,7 +2803,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 rangeId = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 56)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
           rangeid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2781,7 +2811,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // repeated .gpuprofiling.CUptiPCSamplingPCData pPcData = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2794,7 +2824,7 @@ const char* CUptiPCSamplingData::_InternalParse(const char* ptr, ::PROTOBUF_NAME
         continue;
       // uint64 nonUsrKernelsTotalSamples = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 72)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 72)) {
           nonusrkernelstotalsamples_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -2823,10 +2853,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* CUptiPCSamplingData::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* CUptiPCSamplingData::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.CUptiPCSamplingData)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint32 size = 1;
@@ -2897,7 +2927,7 @@ size_t CUptiPCSamplingData::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.CUptiPCSamplingData)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2967,7 +2997,7 @@ void CUptiPCSamplingData::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void CUptiPCSamplingData::MergeFrom(const CUptiPCSamplingData& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.CUptiPCSamplingData)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   ppcdata_.MergeFrom(from.ppcdata_);
@@ -3049,7 +3079,7 @@ GPUProfilingRequest::GPUProfilingRequest(const GPUProfilingRequest& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.GPUProfilingRequest)
 }
 
-void GPUProfilingRequest::SharedCtor() {
+inline void GPUProfilingRequest::SharedCtor() {
 duration_ = 0u;
 }
 
@@ -3076,7 +3106,7 @@ void GPUProfilingRequest::SetCachedSize(int size) const {
 
 void GPUProfilingRequest::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.GPUProfilingRequest)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3087,12 +3117,12 @@ void GPUProfilingRequest::Clear() {
 const char* GPUProfilingRequest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // uint32 duration = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
           duration_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
         } else
@@ -3121,10 +3151,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* GPUProfilingRequest::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* GPUProfilingRequest::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.GPUProfilingRequest)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // uint32 duration = 1;
@@ -3145,7 +3175,7 @@ size_t GPUProfilingRequest::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.GPUProfilingRequest)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3173,7 +3203,7 @@ void GPUProfilingRequest::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void GPUProfilingRequest::MergeFrom(const GPUProfilingRequest& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.GPUProfilingRequest)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   if (from._internal_duration() != 0) {
@@ -3228,6 +3258,9 @@ GPUProfilingResponse::GPUProfilingResponse(const GPUProfilingResponse& from)
       cpucallingctxtree_(from.cpucallingctxtree_) {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   message_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+    message_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   if (!from._internal_message().empty()) {
     message_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_message(), 
       GetArenaForAllocation());
@@ -3236,8 +3269,11 @@ GPUProfilingResponse::GPUProfilingResponse(const GPUProfilingResponse& from)
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.GPUProfilingResponse)
 }
 
-void GPUProfilingResponse::SharedCtor() {
+inline void GPUProfilingResponse::SharedCtor() {
 message_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+#ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  message_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), "", GetArenaForAllocation());
+#endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 version_ = false;
 }
 
@@ -3265,7 +3301,7 @@ void GPUProfilingResponse::SetCachedSize(int size) const {
 
 void GPUProfilingResponse::Clear() {
 // @@protoc_insertion_point(message_clear_start:gpuprofiling.GPUProfilingResponse)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3279,12 +3315,12 @@ void GPUProfilingResponse::Clear() {
 const char* GPUProfilingResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    uint32_t tag;
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // string message = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_message();
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "gpuprofiling.GPUProfilingResponse.message"));
@@ -3294,7 +3330,7 @@ const char* GPUProfilingResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAM
         continue;
       // bool version = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
           version_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else
@@ -3302,7 +3338,7 @@ const char* GPUProfilingResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAM
         continue;
       // repeated .gpuprofiling.CUptiPCSamplingData pcSamplingData = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -3315,7 +3351,7 @@ const char* GPUProfilingResponse::_InternalParse(const char* ptr, ::PROTOBUF_NAM
         continue;
       // repeated .gpuprofiling.CPUCallingContextTree cpuCallingCtxTree = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -3349,10 +3385,10 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* GPUProfilingResponse::_InternalSerialize(
-    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+uint8_t* GPUProfilingResponse::_InternalSerialize(
+    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:gpuprofiling.GPUProfilingResponse)
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // string message = 1;
@@ -3399,7 +3435,7 @@ size_t GPUProfilingResponse::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:gpuprofiling.GPUProfilingResponse)
   size_t total_size = 0;
 
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3448,7 +3484,7 @@ void GPUProfilingResponse::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message* to,
 void GPUProfilingResponse::MergeFrom(const GPUProfilingResponse& from) {
 // @@protoc_insertion_point(class_specific_merge_from_start:gpuprofiling.GPUProfilingResponse)
   GOOGLE_DCHECK_NE(&from, this);
-  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   pcsamplingdata_.MergeFrom(from.pcsamplingdata_);
