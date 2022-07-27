@@ -6,9 +6,10 @@ CUDA(CUPTI)=11.6, grpc & protobuf, libunwind8-dev, libpython3.8-dev
 ```
 ### 1.1 Install grpc & protobuf from source
 Please refer to [gRPC-C++ Quick Start](https://grpc.io/docs/languages/cpp/quickstart/)
-### 1.2 Install libunwind
+### 1.2 Install other dependencies
 ```bash
-apt install libunwind8-dev
+# you may choose the proper version of libpython-dev according to your already installed python
+apt install libunwind8-dev libssl-dev libpython3.8-dev
 ```
 ### 1.3 Configuring
 ```bash
@@ -60,12 +61,12 @@ make client_cpp
 # Issue a profiling request
 ./client_cpp <ip>:<port> <duration>
 ```
-The C++ RPC client would not analyze the profiling results and generate pprof format profiles. It simply prints the RPC response. Consider use it for debugging.
+The C++ RPC client simply prints the RPC response. Consider using it for debugging.
 
 ### 4.2 Cubin Extraction (Offline Mode)
-In the offline mode, Samprof extracts all the loaded modules to cubin files at runtime. The extracted cubin file would be saved as `<moduleId>.cubin`. Setting the `OFFLINE` macro to 1 would enable the offline mode.
+In the offline mode, Samprof extracts all the loaded modules to cubin files at runtime. The extracted cubin files would be saved as `<moduleId>.cubin`. Setting the `OFFLINE` macro to 1 would enable the offline mode.
 ```cpp
-// gpu_profiler.cpp line 842
+// gpu_profiler.cpp
 #define OFFLINE 1
 ```
 
@@ -76,4 +77,4 @@ make cubin_tool
 ```
 `cubin_tool` analyzes the calling relations between CUDA functions via analyzing the assembly code of cubins. Running `./cubin_tool <cubin path> <cubin call graph path>` would analyze all the cubin files in `<cubin path>` and save the analysis results to `<cubin call graph path>`. Call graph files are named as `<cubin crc>.pb.gz`. The proto of CUDA call graph is defined in [gpu_profiling.proto](https://github.com/iteratorlee/samprof/blob/master/protos/gpu_profiling.proto).
 
-Via setting the `PRINTGRAPH` macro to `true`, you could print all the call graph files by running `./cubin_tool <cubin call graph path>`
+Via setting the `PRINTGRAPH` macro to `true`, you can print all the call graph files by running `./cubin_tool <cubin call graph path>`
