@@ -1273,11 +1273,11 @@ void stopPCThreadSyncHandler(int signum) {
     }
 }
 
-void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack) {
+void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbose=false) {
     pthread_t tid = g_pidt2pthreadt[pid];
     // maintaining a seperate CCT for each CPU thread
     if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
-        DEBUG_LOG("new CCT, tid=%d\n", gettid());
+        DEBUG_LOG("new CCT, tid=%d\n", pid);
         CPUCCT* newCCT = new CPUCCT();
         // set a virtual root node of the new added CCT
         CPUCCTNode* vRootNode = new CPUCCTNode();
@@ -1322,6 +1322,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack) {
     }
 
     if (flag) {
+        DEBUG_LOG("new samples to insert\n");
         for (int j = i; j >= 0; --j) {
             if (callStack.fnames[j].length() == 0 || HasExcludePatterns(callStack.fnames[j])) {
                 break;
@@ -1339,6 +1340,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack) {
                 newNode->nodeType = CCTNODE_TYPE_C2P;
             }
 
+            if (verbose) DEBUG_LOG("new sample: %s:%lx\n", funcName.c_str(), pc);
             cpuCCT->insertNode(parentNode, newNode);
             parentNode = newNode;
         }
