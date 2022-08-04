@@ -46,8 +46,8 @@ public:
 	std::unordered_map<uint64_t, CPUCCTNode*> pc2ChildNodes;
 	std::unordered_map<uint64_t, CPUCCTNode*> id2ChildNodes;
 
-	CPUCCTNode(): parentID(0), parentPC(0), samples(0), nodeType(CCTNODE_TYPE_CXX) {};
-	CPUCCTNode(CCTNodeType t): parentID(0), parentPC(0), samples(0), nodeType(t) {};
+	CPUCCTNode(): parentID(0), parentPC(0), samples(1), nodeType(CCTNODE_TYPE_CXX) {};
+	CPUCCTNode(CCTNodeType t): parentID(0), parentPC(0), samples(1), nodeType(t) {};
 
 	int addChild(CPUCCTNode* child, bool ignoreDupPC=false) {
 		childNodes.push_back(child);
@@ -105,6 +105,7 @@ public:
 		cctMutex.lock();
 		int insertStatus = parent->addChild(child, ignoreDupPC);
 		if (insertStatus != INSERT_SUCCESS) {
+			cctMutex.unlock();
 			return insertStatus;
 		}
 		nodeMap.insert(std::make_pair(child->id, child));
