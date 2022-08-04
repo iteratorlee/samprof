@@ -79,8 +79,8 @@ static void PrintSamplingResults(GPUProfilingResponse response) {
 			nodeQueue.push(CCT.nodemap().at(CCT.rootid()));
 			while (!nodeQueue.empty()) {
 				CPUCallingContextNode node = nodeQueue.front();
-				printf("[CCTNode] id=%lu, pc=%p, offset=%lu, funcName=%s, nchilds=%d, childs=", \
-					node.id(), (void *)node.pc(), node.offset(), node.funcname().c_str(), node.childpcs_size());
+				printf("[CCTNode] id=%lu, pc=%p, offset=%lu, samples=%lu, funcName=%s, nchilds=%d, childs=", \
+					node.id(), (void *)node.pc(), node.offset(), node.samples(), node.funcname().c_str(), node.childpcs_size());
 				for (auto childid: node.childids()) {
 					printf("%lu,", childid);
 					nodeQueue.push(CCT.nodemap().at(childid));

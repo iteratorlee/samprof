@@ -55,7 +55,8 @@ constexpr CPUCallingContextNode::CPUCallingContextNode(
   , pc_(uint64_t{0u})
   , offset_(uint64_t{0u})
   , parentid_(uint64_t{0u})
-  , parentpc_(uint64_t{0u}){}
+  , parentpc_(uint64_t{0u})
+  , samples_(uint64_t{0u}){}
 struct CPUCallingContextNodeDefaultTypeInternal {
   constexpr CPUCallingContextNodeDefaultTypeInternal()
     : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
@@ -229,6 +230,7 @@ const uint32_t TableStruct_gpu_5fprofiling_2eproto::offsets[] PROTOBUF_SECTION_V
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, funcname_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, parentid_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, parentpc_),
+  PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, samples_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, childs_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, childids_),
   PROTOBUF_FIELD_OFFSET(::gpuprofiling::CPUCallingContextNode, childpcs_),
@@ -323,14 +325,14 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 0, 8, -1, sizeof(::gpuprofiling::CPUCallingContextTree_NodeMapEntry_DoNotUse)},
   { 10, -1, -1, sizeof(::gpuprofiling::CPUCallingContextTree)},
   { 20, -1, -1, sizeof(::gpuprofiling::CPUCallingContextNode)},
-  { 35, -1, -1, sizeof(::gpuprofiling::GPUCallingGraphNode)},
-  { 46, -1, -1, sizeof(::gpuprofiling::GPUCallingGraphEdge)},
-  { 57, -1, -1, sizeof(::gpuprofiling::GPUCallingGraph)},
-  { 65, -1, -1, sizeof(::gpuprofiling::PCSamplingStallReason)},
-  { 73, -1, -1, sizeof(::gpuprofiling::CUptiPCSamplingPCData)},
-  { 89, -1, -1, sizeof(::gpuprofiling::CUptiPCSamplingData)},
-  { 104, -1, -1, sizeof(::gpuprofiling::GPUProfilingRequest)},
-  { 111, -1, -1, sizeof(::gpuprofiling::GPUProfilingResponse)},
+  { 36, -1, -1, sizeof(::gpuprofiling::GPUCallingGraphNode)},
+  { 47, -1, -1, sizeof(::gpuprofiling::GPUCallingGraphEdge)},
+  { 58, -1, -1, sizeof(::gpuprofiling::GPUCallingGraph)},
+  { 66, -1, -1, sizeof(::gpuprofiling::PCSamplingStallReason)},
+  { 74, -1, -1, sizeof(::gpuprofiling::CUptiPCSamplingPCData)},
+  { 90, -1, -1, sizeof(::gpuprofiling::CUptiPCSamplingData)},
+  { 105, -1, -1, sizeof(::gpuprofiling::GPUProfilingRequest)},
+  { 112, -1, -1, sizeof(::gpuprofiling::GPUProfilingResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -355,49 +357,49 @@ const char descriptor_table_protodef_gpu_5fprofiling_2eproto[] PROTOBUF_SECTION_
   "\01320.gpuprofiling.CPUCallingContextTree.N"
   "odeMapEntry\032S\n\014NodeMapEntry\022\013\n\003key\030\001 \001(\003"
   "\0222\n\005value\030\002 \001(\0132#.gpuprofiling.CPUCallin"
-  "gContextNode:\0028\001\"\316\001\n\025CPUCallingContextNo"
+  "gContextNode:\0028\001\"\337\001\n\025CPUCallingContextNo"
   "de\022\n\n\002id\030\001 \001(\004\022\n\n\002pc\030\002 \001(\004\022\016\n\006offset\030\003 \001"
   "(\004\022\020\n\010funcName\030\004 \001(\t\022\020\n\010parentID\030\005 \001(\004\022\020"
-  "\n\010parentPC\030\006 \001(\004\0223\n\006childs\030\007 \003(\0132#.gpupr"
-  "ofiling.CPUCallingContextNode\022\020\n\010childID"
-  "s\030\010 \003(\004\022\020\n\010childPCs\030\t \003(\004\"m\n\023GPUCallingG"
-  "raphNode\022\020\n\010cubinCrc\030\001 \001(\004\022\020\n\010funcName\030\002"
-  " \001(\t\022\021\n\taddrBegin\030\003 \001(\004\022\017\n\007addrEnd\030\004 \001(\004"
-  "\022\016\n\006weight\030\005 \001(\004\"y\n\023GPUCallingGraphEdge\022"
-  "\023\n\013srcFuncName\030\001 \001(\t\022\023\n\013srcPCOffset\030\002 \001("
-  "\004\022\023\n\013dstFuncName\030\003 \001(\t\022\023\n\013dstPCOffset\030\004 "
-  "\001(\004\022\016\n\006weight\030\005 \001(\004\"u\n\017GPUCallingGraph\0220"
-  "\n\005nodes\030\001 \003(\0132!.gpuprofiling.GPUCallingG"
-  "raphNode\0220\n\005edges\030\002 \003(\0132!.gpuprofiling.G"
-  "PUCallingGraphEdge\"L\n\025PCSamplingStallRea"
-  "son\022\"\n\032pcSamplingStallReasonIndex\030\001 \001(\r\022"
-  "\017\n\007samples\030\002 \001(\r\"\205\002\n\025CUptiPCSamplingPCDa"
-  "ta\022\014\n\004size\030\001 \001(\r\022\020\n\010cubinCrc\030\002 \001(\004\022\020\n\010pc"
-  "Offset\030\003 \001(\004\022\025\n\rfunctionIndex\030\004 \001(\r\022\013\n\003p"
-  "ad\030\005 \001(\r\022\024\n\014functionName\030\006 \001(\t\022\030\n\020stallR"
-  "easonCount\030\007 \001(\r\0228\n\013stallReason\030\010 \003(\0132#."
-  "gpuprofiling.PCSamplingStallReason\022\025\n\rpa"
-  "rentCPUPCID\030\t \001(\003\022\025\n\rcorrelationId\030\n \001(\r"
-  "\"\200\002\n\023CUptiPCSamplingData\022\014\n\004size\030\001 \001(\r\022\025"
-  "\n\rcollectNumPcs\030\002 \001(\r\022\024\n\014totalSamples\030\003 "
-  "\001(\004\022\026\n\016droppedSamples\030\004 \001(\004\022\023\n\013totalNumP"
-  "cs\030\005 \001(\r\022\027\n\017remainingNumPcs\030\006 \001(\r\022\017\n\007ran"
-  "geId\030\007 \001(\004\0224\n\007pPcData\030\010 \003(\0132#.gpuprofili"
-  "ng.CUptiPCSamplingPCData\022!\n\031nonUsrKernel"
-  "sTotalSamples\030\t \001(\004\"\'\n\023GPUProfilingReque"
-  "st\022\020\n\010duration\030\001 \001(\r\"\263\001\n\024GPUProfilingRes"
-  "ponse\022\017\n\007message\030\001 \001(\t\022\017\n\007version\030\002 \001(\010\022"
-  "9\n\016pcSamplingData\030\003 \003(\0132!.gpuprofiling.C"
-  "UptiPCSamplingData\022>\n\021cpuCallingCtxTree\030"
-  "\004 \003(\0132#.gpuprofiling.CPUCallingContextTr"
-  "ee2u\n\023GPUProfilingService\022^\n\023PerformGPUP"
-  "rofiling\022!.gpuprofiling.GPUProfilingRequ"
-  "est\032\".gpuprofiling.GPUProfilingResponse\""
-  "\000B\n\242\002\007GPUPROFb\006proto3"
+  "\n\010parentPC\030\006 \001(\004\022\017\n\007samples\030\007 \001(\004\0223\n\006chi"
+  "lds\030\010 \003(\0132#.gpuprofiling.CPUCallingConte"
+  "xtNode\022\020\n\010childIDs\030\t \003(\004\022\020\n\010childPCs\030\n \003"
+  "(\004\"m\n\023GPUCallingGraphNode\022\020\n\010cubinCrc\030\001 "
+  "\001(\004\022\020\n\010funcName\030\002 \001(\t\022\021\n\taddrBegin\030\003 \001(\004"
+  "\022\017\n\007addrEnd\030\004 \001(\004\022\016\n\006weight\030\005 \001(\004\"y\n\023GPU"
+  "CallingGraphEdge\022\023\n\013srcFuncName\030\001 \001(\t\022\023\n"
+  "\013srcPCOffset\030\002 \001(\004\022\023\n\013dstFuncName\030\003 \001(\t\022"
+  "\023\n\013dstPCOffset\030\004 \001(\004\022\016\n\006weight\030\005 \001(\004\"u\n\017"
+  "GPUCallingGraph\0220\n\005nodes\030\001 \003(\0132!.gpuprof"
+  "iling.GPUCallingGraphNode\0220\n\005edges\030\002 \003(\013"
+  "2!.gpuprofiling.GPUCallingGraphEdge\"L\n\025P"
+  "CSamplingStallReason\022\"\n\032pcSamplingStallR"
+  "easonIndex\030\001 \001(\r\022\017\n\007samples\030\002 \001(\r\"\205\002\n\025CU"
+  "ptiPCSamplingPCData\022\014\n\004size\030\001 \001(\r\022\020\n\010cub"
+  "inCrc\030\002 \001(\004\022\020\n\010pcOffset\030\003 \001(\004\022\025\n\rfunctio"
+  "nIndex\030\004 \001(\r\022\013\n\003pad\030\005 \001(\r\022\024\n\014functionNam"
+  "e\030\006 \001(\t\022\030\n\020stallReasonCount\030\007 \001(\r\0228\n\013sta"
+  "llReason\030\010 \003(\0132#.gpuprofiling.PCSampling"
+  "StallReason\022\025\n\rparentCPUPCID\030\t \001(\003\022\025\n\rco"
+  "rrelationId\030\n \001(\r\"\200\002\n\023CUptiPCSamplingDat"
+  "a\022\014\n\004size\030\001 \001(\r\022\025\n\rcollectNumPcs\030\002 \001(\r\022\024"
+  "\n\014totalSamples\030\003 \001(\004\022\026\n\016droppedSamples\030\004"
+  " \001(\004\022\023\n\013totalNumPcs\030\005 \001(\r\022\027\n\017remainingNu"
+  "mPcs\030\006 \001(\r\022\017\n\007rangeId\030\007 \001(\004\0224\n\007pPcData\030\010"
+  " \003(\0132#.gpuprofiling.CUptiPCSamplingPCDat"
+  "a\022!\n\031nonUsrKernelsTotalSamples\030\t \001(\004\"\'\n\023"
+  "GPUProfilingRequest\022\020\n\010duration\030\001 \001(\r\"\263\001"
+  "\n\024GPUProfilingResponse\022\017\n\007message\030\001 \001(\t\022"
+  "\017\n\007version\030\002 \001(\010\0229\n\016pcSamplingData\030\003 \003(\013"
+  "2!.gpuprofiling.CUptiPCSamplingData\022>\n\021c"
+  "puCallingCtxTree\030\004 \003(\0132#.gpuprofiling.CP"
+  "UCallingContextTree2u\n\023GPUProfilingServi"
+  "ce\022^\n\023PerformGPUProfiling\022!.gpuprofiling"
+  ".GPUProfilingRequest\032\".gpuprofiling.GPUP"
+  "rofilingResponse\"\000B\n\242\002\007GPUPROFb\006proto3"
   ;
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_gpu_5fprofiling_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_gpu_5fprofiling_2eproto = {
-  false, false, 1821, descriptor_table_protodef_gpu_5fprofiling_2eproto, "gpu_profiling.proto", 
+  false, false, 1838, descriptor_table_protodef_gpu_5fprofiling_2eproto, "gpu_profiling.proto", 
   &descriptor_table_gpu_5fprofiling_2eproto_once, nullptr, 0, 11,
   schemas, file_default_instances, TableStruct_gpu_5fprofiling_2eproto::offsets,
   file_level_metadata_gpu_5fprofiling_2eproto, file_level_enum_descriptors_gpu_5fprofiling_2eproto, file_level_service_descriptors_gpu_5fprofiling_2eproto,
@@ -772,8 +774,8 @@ CPUCallingContextNode::CPUCallingContextNode(const CPUCallingContextNode& from)
       GetArenaForAllocation());
   }
   ::memcpy(&id_, &from.id_,
-    static_cast<size_t>(reinterpret_cast<char*>(&parentpc_) -
-    reinterpret_cast<char*>(&id_)) + sizeof(parentpc_));
+    static_cast<size_t>(reinterpret_cast<char*>(&samples_) -
+    reinterpret_cast<char*>(&id_)) + sizeof(samples_));
   // @@protoc_insertion_point(copy_constructor:gpuprofiling.CPUCallingContextNode)
 }
 
@@ -784,8 +786,8 @@ funcname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlr
 #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&id_) - reinterpret_cast<char*>(this)),
-    0, static_cast<size_t>(reinterpret_cast<char*>(&parentpc_) -
-    reinterpret_cast<char*>(&id_)) + sizeof(parentpc_));
+    0, static_cast<size_t>(reinterpret_cast<char*>(&samples_) -
+    reinterpret_cast<char*>(&id_)) + sizeof(samples_));
 }
 
 CPUCallingContextNode::~CPUCallingContextNode() {
@@ -821,8 +823,8 @@ void CPUCallingContextNode::Clear() {
   childpcs_.Clear();
   funcname_.ClearToEmpty();
   ::memset(&id_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&parentpc_) -
-      reinterpret_cast<char*>(&id_)) + sizeof(parentpc_));
+      reinterpret_cast<char*>(&samples_) -
+      reinterpret_cast<char*>(&id_)) + sizeof(samples_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -882,36 +884,44 @@ const char* CPUCallingContextNode::_InternalParse(const char* ptr, ::PROTOBUF_NA
         } else
           goto handle_unusual;
         continue;
-      // repeated .gpuprofiling.CPUCallingContextNode childs = 7;
+      // uint64 samples = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 56)) {
+          samples_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated .gpuprofiling.CPUCallingContextNode childs = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
           ptr -= 1;
           do {
             ptr += 1;
             ptr = ctx->ParseMessage(_internal_add_childs(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
-          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<58>(ptr));
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<66>(ptr));
         } else
           goto handle_unusual;
         continue;
-      // repeated uint64 childIDs = 8;
-      case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
+      // repeated uint64 childIDs = 9;
+      case 9:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_childids(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 64) {
+        } else if (static_cast<uint8_t>(tag) == 72) {
           _internal_add_childids(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // repeated uint64 childPCs = 9;
-      case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
+      // repeated uint64 childPCs = 10;
+      case 10:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_childpcs(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 72) {
+        } else if (static_cast<uint8_t>(tag) == 80) {
           _internal_add_childpcs(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
         } else
@@ -986,29 +996,35 @@ uint8_t* CPUCallingContextNode::_InternalSerialize(
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(6, this->_internal_parentpc(), target);
   }
 
-  // repeated .gpuprofiling.CPUCallingContextNode childs = 7;
+  // uint64 samples = 7;
+  if (this->_internal_samples() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(7, this->_internal_samples(), target);
+  }
+
+  // repeated .gpuprofiling.CPUCallingContextNode childs = 8;
   for (unsigned int i = 0,
       n = static_cast<unsigned int>(this->_internal_childs_size()); i < n; i++) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(7, this->_internal_childs(i), target, stream);
+      InternalWriteMessage(8, this->_internal_childs(i), target, stream);
   }
 
-  // repeated uint64 childIDs = 8;
+  // repeated uint64 childIDs = 9;
   {
     int byte_size = _childids_cached_byte_size_.load(std::memory_order_relaxed);
     if (byte_size > 0) {
       target = stream->WriteUInt64Packed(
-          8, _internal_childids(), byte_size, target);
+          9, _internal_childids(), byte_size, target);
     }
   }
 
-  // repeated uint64 childPCs = 9;
+  // repeated uint64 childPCs = 10;
   {
     int byte_size = _childpcs_cached_byte_size_.load(std::memory_order_relaxed);
     if (byte_size > 0) {
       target = stream->WriteUInt64Packed(
-          9, _internal_childpcs(), byte_size, target);
+          10, _internal_childpcs(), byte_size, target);
     }
   }
 
@@ -1028,14 +1044,14 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .gpuprofiling.CPUCallingContextNode childs = 7;
+  // repeated .gpuprofiling.CPUCallingContextNode childs = 8;
   total_size += 1UL * this->_internal_childs_size();
   for (const auto& msg : this->childs_) {
     total_size +=
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
-  // repeated uint64 childIDs = 8;
+  // repeated uint64 childIDs = 9;
   {
     size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       UInt64Size(this->childids_);
@@ -1050,7 +1066,7 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
     total_size += data_size;
   }
 
-  // repeated uint64 childPCs = 9;
+  // repeated uint64 childPCs = 10;
   {
     size_t data_size = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       UInt64Size(this->childpcs_);
@@ -1097,6 +1113,11 @@ size_t CPUCallingContextNode::ByteSizeLong() const {
     total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64SizePlusOne(this->_internal_parentpc());
   }
 
+  // uint64 samples = 7;
+  if (this->_internal_samples() != 0) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64SizePlusOne(this->_internal_samples());
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_cached_size_);
 }
 
@@ -1140,6 +1161,9 @@ void CPUCallingContextNode::MergeFrom(const CPUCallingContextNode& from) {
   if (from._internal_parentpc() != 0) {
     _internal_set_parentpc(from._internal_parentpc());
   }
+  if (from._internal_samples() != 0) {
+    _internal_set_samples(from._internal_samples());
+  }
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -1168,8 +1192,8 @@ void CPUCallingContextNode::InternalSwap(CPUCallingContextNode* other) {
       &other->funcname_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CPUCallingContextNode, parentpc_)
-      + sizeof(CPUCallingContextNode::parentpc_)
+      PROTOBUF_FIELD_OFFSET(CPUCallingContextNode, samples_)
+      + sizeof(CPUCallingContextNode::samples_)
       - PROTOBUF_FIELD_OFFSET(CPUCallingContextNode, id_)>(
           reinterpret_cast<char*>(&id_),
           reinterpret_cast<char*>(&other->id_));

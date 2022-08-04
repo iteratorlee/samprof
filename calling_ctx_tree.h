@@ -1,9 +1,10 @@
 #ifndef __CCT_INCLUDED__
 #define __CCT_INCLUDED__
-#include <stdio.h>
-#include <iostream>
+#include <mutex>
 #include <string>
 #include <vector>
+#include <stdio.h>
+#include <iostream>
 #include <unordered_map>
 
 #include <libunwind.h>
@@ -38,14 +39,15 @@ public:
 	uint64_t parentID;
 	uint64_t parentPC;
 	uint64_t offset;
+	uint64_t samples;
 	CCTNodeType nodeType;
 	std::string funcName;
 	std::vector<CPUCCTNode*> childNodes;
 	std::unordered_map<uint64_t, CPUCCTNode*> pc2ChildNodes;
 	std::unordered_map<uint64_t, CPUCCTNode*> id2ChildNodes;
 
-	CPUCCTNode(): parentID(0), parentPC(0), nodeType(CCTNODE_TYPE_CXX) {};
-	CPUCCTNode(CCTNodeType t): parentID(0), parentPC(0), nodeType(t) {};
+	CPUCCTNode(): parentID(0), parentPC(0), samples(0), nodeType(CCTNODE_TYPE_CXX) {};
+	CPUCCTNode(CCTNodeType t): parentID(0), parentPC(0), samples(0), nodeType(t) {};
 
 	int addChild(CPUCCTNode* child, bool ignoreDupPC=false) {
 		childNodes.push_back(child);
@@ -87,6 +89,8 @@ public:
 	CPUCCTNode* root;
 	std::unordered_map<uint64_t, CPUCCTNode*> nodeMap;
 
+	std::mutex cctMutex;
+
 	CPUCCT(): root(nullptr) {};
 	CPUCCT(CPUCCTNode* _root): root(_root) {};
 
@@ -98,11 +102,13 @@ public:
 	}
 
 	int insertNode(CPUCCTNode* parent, CPUCCTNode* child, bool ignoreDupPC=false) {
+		cctMutex.lock();
 		int insertStatus = parent->addChild(child, ignoreDupPC);
 		if (insertStatus != INSERT_SUCCESS) {
 			return insertStatus;
 		}
 		nodeMap.insert(std::make_pair(child->id, child));
+		cctMutex.unlock();
 		return INSERT_SUCCESS;
 	}
 

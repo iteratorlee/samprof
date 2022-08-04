@@ -454,17 +454,18 @@ class CPUCallingContextNode final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kChildsFieldNumber = 7,
-    kChildIDsFieldNumber = 8,
-    kChildPCsFieldNumber = 9,
+    kChildsFieldNumber = 8,
+    kChildIDsFieldNumber = 9,
+    kChildPCsFieldNumber = 10,
     kFuncNameFieldNumber = 4,
     kIdFieldNumber = 1,
     kPcFieldNumber = 2,
     kOffsetFieldNumber = 3,
     kParentIDFieldNumber = 5,
     kParentPCFieldNumber = 6,
+    kSamplesFieldNumber = 7,
   };
-  // repeated .gpuprofiling.CPUCallingContextNode childs = 7;
+  // repeated .gpuprofiling.CPUCallingContextNode childs = 8;
   int childs_size() const;
   private:
   int _internal_childs_size() const;
@@ -482,7 +483,7 @@ class CPUCallingContextNode final :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::gpuprofiling::CPUCallingContextNode >&
       childs() const;
 
-  // repeated uint64 childIDs = 8;
+  // repeated uint64 childIDs = 9;
   int childids_size() const;
   private:
   int _internal_childids_size() const;
@@ -504,7 +505,7 @@ class CPUCallingContextNode final :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< uint64_t >*
       mutable_childids();
 
-  // repeated uint64 childPCs = 9;
+  // repeated uint64 childPCs = 10;
   int childpcs_size() const;
   private:
   int _internal_childpcs_size() const;
@@ -585,6 +586,15 @@ class CPUCallingContextNode final :
   void _internal_set_parentpc(uint64_t value);
   public:
 
+  // uint64 samples = 7;
+  void clear_samples();
+  uint64_t samples() const;
+  void set_samples(uint64_t value);
+  private:
+  uint64_t _internal_samples() const;
+  void _internal_set_samples(uint64_t value);
+  public:
+
   // @@protoc_insertion_point(class_scope:gpuprofiling.CPUCallingContextNode)
  private:
   class _Internal;
@@ -603,6 +613,7 @@ class CPUCallingContextNode final :
   uint64_t offset_;
   uint64_t parentid_;
   uint64_t parentpc_;
+  uint64_t samples_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_gpu_5fprofiling_2eproto;
 };
@@ -2510,7 +2521,27 @@ inline void CPUCallingContextNode::set_parentpc(uint64_t value) {
   // @@protoc_insertion_point(field_set:gpuprofiling.CPUCallingContextNode.parentPC)
 }
 
-// repeated .gpuprofiling.CPUCallingContextNode childs = 7;
+// uint64 samples = 7;
+inline void CPUCallingContextNode::clear_samples() {
+  samples_ = uint64_t{0u};
+}
+inline uint64_t CPUCallingContextNode::_internal_samples() const {
+  return samples_;
+}
+inline uint64_t CPUCallingContextNode::samples() const {
+  // @@protoc_insertion_point(field_get:gpuprofiling.CPUCallingContextNode.samples)
+  return _internal_samples();
+}
+inline void CPUCallingContextNode::_internal_set_samples(uint64_t value) {
+  
+  samples_ = value;
+}
+inline void CPUCallingContextNode::set_samples(uint64_t value) {
+  _internal_set_samples(value);
+  // @@protoc_insertion_point(field_set:gpuprofiling.CPUCallingContextNode.samples)
+}
+
+// repeated .gpuprofiling.CPUCallingContextNode childs = 8;
 inline int CPUCallingContextNode::_internal_childs_size() const {
   return childs_.size();
 }
@@ -2550,7 +2581,7 @@ CPUCallingContextNode::childs() const {
   return childs_;
 }
 
-// repeated uint64 childIDs = 8;
+// repeated uint64 childIDs = 9;
 inline int CPUCallingContextNode::_internal_childids_size() const {
   return childids_.size();
 }
@@ -2597,7 +2628,7 @@ CPUCallingContextNode::mutable_childids() {
   return _internal_mutable_childids();
 }
 
-// repeated uint64 childPCs = 9;
+// repeated uint64 childPCs = 10;
 inline int CPUCallingContextNode::_internal_childpcs_size() const {
   return childpcs_.size();
 }

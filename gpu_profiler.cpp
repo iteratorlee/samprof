@@ -420,6 +420,7 @@ static void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
             protoNode.set_parentid(node.second->parentID);
             protoNode.set_parentpc(node.second->parentPC);
             protoNode.set_offset(node.second->offset);
+            protoNode.set_samples(node.second->samples);
             protoNode.set_funcname(node.second->funcName);
             for (auto id2child: node.second->id2ChildNodes) {
                 protoNode.add_childids(id2child.first);
@@ -1306,6 +1307,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
     // TODO: update the sample count
     bool flag = false;
     for (i = callStack.depth - 1; i >= 0; --i) {
+        if (verbose) DEBUG_LOG("[pid=%d] in cpu sampler thread, %s:%lx\n", pid, callStack.fnames[i].c_str(), callStack.pcs[i]);
         if (callStack.fnames[i].length() == 0 || HasExcludePatterns(callStack.fnames[i])) {
             break;
         }
@@ -1315,6 +1317,8 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
         auto childNode = parentNode->getChildbyPC(pc);
         if (childNode) {
             parentNode = childNode;
+            ++childNode->samples;
+            if (verbose) DEBUG_LOG("[pid=%d] old cpu sample: %s:%lx, samples=%lu\n", pid, funcName.c_str(), pc, childNode->samples);
         } else {
             flag = true;
             break;
@@ -1340,7 +1344,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
                 newNode->nodeType = CCTNODE_TYPE_C2P;
             }
 
-            if (verbose) DEBUG_LOG("new sample: %s:%lx\n", funcName.c_str(), pc);
+            if (verbose) DEBUG_LOG("[pid=%d] new cpu sample: %s:%lx\n", pid, funcName.c_str(), pc);
             cpuCCT->insertNode(parentNode, newNode);
             parentNode = newNode;
         }
@@ -1353,9 +1357,10 @@ void CollectCPUSamplerData() {
         for (auto itr: tid2CallStack) {
             auto pid = itr.first;
             auto callStack = itr.second;
-            UpdateCCT(pid, callStack);
+            UpdateCCT(pid, callStack, true);
         }
     }
+    DEBUG_LOG("cpu sampler not running, stop collecting cpu pc data\n");
 }
 
 class GPUProfilingServiceImpl final: public GPUProfilingService::Service {

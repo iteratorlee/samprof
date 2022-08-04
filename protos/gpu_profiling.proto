@@ -25,10 +25,11 @@ message CPUCallingContextNode {
     string funcName = 4;
     uint64 parentID = 5;
     uint64 parentPC = 6;
+    uint64 samples = 7;
     // deprecated
-    repeated CPUCallingContextNode childs = 7;
-    repeated uint64 childIDs = 8;
-    repeated uint64 childPCs = 9;
+    repeated CPUCallingContextNode childs = 8;
+    repeated uint64 childIDs = 9;
+    repeated uint64 childPCs = 10;
 }
 
 message GPUCallingGraphNode {
