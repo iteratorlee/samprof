@@ -1343,6 +1343,10 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
                 // this is a potential py node
                 newNode->nodeType = CCTNODE_TYPE_C2P;
             }
+            g_CPUCCTNodeIdMutex.lock();
+            newNode->id = g_CPUCCTNodeId;
+            ++g_CPUCCTNodeId;
+            g_CPUCCTNodeIdMutex.unlock();
 
             if (verbose) DEBUG_LOG("[pid=%d] new cpu sample: %s:%lx\n", pid, funcName.c_str(), pc);
             cpuCCT->insertNode(parentNode, newNode);
