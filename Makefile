@@ -61,13 +61,10 @@ gpu_profiler: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling
 gpu_profiler_debug: gpu_profiler.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp cpu_sampler.cpp
 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o profiler_debug $^ $(LIBS) $(LDFLAGS)
 
-gpu_profiler_wo_rpc: gpu_profiler_wo_rpc.cpp
+gpu_profiler_wo_rpc: deprecated/gpu_profiler_wo_rpc.cpp
 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o $(LIBNAME_NO_RPC) -shared $^ $(LIBS)
 
-gpu_profiler_wo_rpc_debug: gpu_profiler_wo_rpc.cpp
-	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o profiler_debug $^ $(LIBS)
-
-gpu_profiler_old: gpu_profiler_old_version.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp back_tracer.cpp
+gpu_profiler_old: deprecated/gpu_profiler_old_version.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc common.cpp back_tracer.cpp
 	$(NVCC) -g $(NVCCFLAGS) $(INCLUDES) -o $(LIBNAMEV1) -shared $^ $(LIBS) $(LDFLAGS)
 
 client_cpp: tools/client.cpp cpp-gen/gpu_profiling.pb.cc cpp-gen/gpu_profiling.grpc.pb.cc
