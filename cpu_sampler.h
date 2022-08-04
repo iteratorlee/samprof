@@ -1,5 +1,7 @@
 #ifndef __CPU_SAMPLER_INCLUDED__
 #define __CPU_SAMPLER_INCLUDED__
+#include <mutex>
+
 #include <poll.h>
 #include <unistd.h>
 #include <memory.h>
@@ -63,6 +65,7 @@ public:
 private:
     std::unordered_map<pid_t, CPUCallStackSampler*> samplers;
     bool running;
+    std::mutex statusMutex;
 };
 
 static std::string ParseBTSymbol(std::string rawStr) {

@@ -155,17 +155,21 @@ void CPUCallStackSamplerCollection::DeleteSampler(pid_t pid) {
 }
 
 void CPUCallStackSamplerCollection::EnableSampling() {
+    statusMutex.lock();
     for (auto itr: samplers) {
         itr.second->EnableSampling();
     }
     running = true;
+    statusMutex.unlock();
 }
 
 void CPUCallStackSamplerCollection::DisableSampling() {
+    statusMutex.lock();
     for (auto itr: samplers) {
         itr.second->DisableSampling();
     }
     running = false;
+    statusMutex.unlock();
 }
 
 bool CPUCallStackSamplerCollection::IsRunning() {
@@ -174,6 +178,7 @@ bool CPUCallStackSamplerCollection::IsRunning() {
 
 std::unordered_map<pid_t, CPUCallStackSampler::CallStack>
 CPUCallStackSamplerCollection::CollectData() {
+    statusMutex.lock();
     std::unordered_map<pid_t, CPUCallStackSampler::CallStack> ret;
     for (auto itr: samplers) {
         CPUCallStackSampler::CallStack callStack;
@@ -186,6 +191,7 @@ CPUCallStackSamplerCollection::CollectData() {
             std::make_pair(itr.first, callStack)
         );
     }
+    statusMutex.unlock();
 
     return ret;
 }
