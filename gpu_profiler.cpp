@@ -1368,7 +1368,8 @@ void CollectCPUSamplerData() {
 }
 
 class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
-    Status PerformGPUProfiling(ServerContext* context, const GPUProfilingRequest* request, GPUProfilingResponse* reply) override {
+    Status PerformGPUProfiling(ServerContext* context, const GPUProfilingRequest* request,
+                               GPUProfilingResponse* reply) override {
         auto rpcTimer = Timer::GetGlobalTimer("rpc");
         rpcTimer->start();
         DEBUG_LOG("pc sampling request received, duration=%u\n", request->duration());
@@ -1399,6 +1400,7 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
         if (GetProfilerConf()->noSampling) {
             g_tracingStarted = true;
         } else {
+            // TODO(pengchengli): strange logic here. Choose the first tid?
             for (auto tid: g_kernelThreadTids) {
                 selectedTid = tid;
                 break;
@@ -1414,7 +1416,7 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
             }
 
             DEBUG_LOG("in rpc server, waiting for pc sampling starting\n");
-            while(!g_pcSamplingStarted);
+            while(!g_pcSamplingStarted) { }
         }
 
         if (!GetProfilerConf()->noSampling) {
@@ -1427,12 +1429,10 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
             g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
         }
 
-        if (request->duration() > 0)
-        {
+        // TODO(lpc0220): Should we check this upfront?
+        if (request->duration() > 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(request->duration()));
-        }
-        else
-        {
+        } else {
             std::cout << "Duration should be a positive number (larger than 1000 recommended)" << std::endl;
             return Status::CANCELLED;
         }
@@ -1501,8 +1501,7 @@ void RunServer() {
 extern "C" int InitializeInjection(void)
 {
     g_initializeInjectionMutex.lock();
-    if (!g_initializedInjection)
-    {
+    if (!g_initializedInjection) {
         DEBUG_LOG("... Initialize injection ...\n");
 
         g_cpuSamplerCollection = new CPUCallStackSamplerCollection();
@@ -1522,7 +1521,7 @@ extern "C" int InitializeInjection(void)
     signal(SIGUSR1, startPCThreadSyncHanlder);
     signal(SIGUSR2, stopPCThreadSyncHandler);
 
-    if (GetProfilerConf()->noRPC){
+    if (GetProfilerConf()->noRPC) {
         g_pcSamplingStarted = true;
         g_cpuSamplerCollection->EnableSampling();
         g_tracingStarted = true;
