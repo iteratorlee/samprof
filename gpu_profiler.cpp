@@ -635,22 +635,19 @@ void ConfigureActivity(CUcontext cuCtx)
     samplingDataBuffer.attributeData.samplingDataBufferData.samplingDataBuffer = (void *)&contextStateMapItr->second->pcSamplingData;
 
     sampPeriod.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_PERIOD;
-    if (GetProfilerConf()->samplingPeriod)
-    {
+    if (GetProfilerConf()->samplingPeriod) {
         sampPeriod.attributeData.samplingPeriodData.samplingPeriod = GetProfilerConf()->samplingPeriod;
         pcSamplingConfigurationInfo.push_back(sampPeriod);
     }
 
     scratchBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
-    if (GetProfilerConf()->scratchBufSize)
-    {
+    if (GetProfilerConf()->scratchBufSize) {
         scratchBufferSize.attributeData.scratchBufferSizeData.scratchBufferSize = GetProfilerConf()->scratchBufSize;
         pcSamplingConfigurationInfo.push_back(scratchBufferSize);
     }
 
     hwBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
-    if (GetProfilerConf()->hwBufSize)
-    {
+    if (GetProfilerConf()->hwBufSize) {
         hwBufferSize.attributeData.hardwareBufferSizeData.hardwareBufferSize = GetProfilerConf()->hwBufSize;
         pcSamplingConfigurationInfo.push_back(hwBufferSize);
     }
@@ -704,8 +701,7 @@ void ConfigureActivity(CUcontext cuCtx)
 
     CUPTI_CALL(cuptiPCSamplingGetConfigurationAttribute(&getPcSamplingConfigurationInfoParams));
 
-    for (size_t i = 0; i < getPcSamplingConfigurationInfoParams.numAttributes; i++)
-    {
+    for (size_t i = 0; i < getPcSamplingConfigurationInfoParams.numAttributes; i++) {
         contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[i]);
     }
 
@@ -813,14 +809,12 @@ void CUPTIAPI DumpCudaModule(CUpti_CallbackId cbid, void* resourceDescriptor) {
 
 void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, void* cbdata)
 {
-    switch (domain)
-    {
+    switch (domain) {
         case CUPTI_CB_DOMAIN_DRIVER_API:
         {
             const CUpti_CallbackData* cbInfo = (CUpti_CallbackData*)cbdata;
 
-            switch (cbid)
-            {
+            switch (cbid) {
                 case CUPTI_DRIVER_TRACE_CBID_cuLaunch:
                 case CUPTI_DRIVER_TRACE_CBID_cuLaunchGrid:
                 case CUPTI_DRIVER_TRACE_CBID_cuLaunchGridAsync:
@@ -830,8 +824,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_Callback
                 case CUPTI_DRIVER_TRACE_CBID_cuLaunchCooperativeKernel_ptsz:
                 case CUPTI_DRIVER_TRACE_CBID_cuLaunchCooperativeKernelMultiDevice:
                 {
-                    if (cbInfo->callbackSite == CUPTI_API_ENTER)
-                    {
+                    if (cbInfo->callbackSite == CUPTI_API_ENTER) {
                         // DEBUG_LOG("correlation id:%u\n", cbInfo->correlationId);
                         // recording all the threads launching kernels
                         pthread_t tid = pthread_self();
@@ -1164,46 +1157,44 @@ static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
 }
 
 static inline bool checkSyncMap() {
-    for (auto ts: g_kernelThreadSyncedMap) {
-        if (!ts.second) return false;
-    }
-    return true;
+  for (auto ts : g_kernelThreadSyncedMap) {
+    if (!ts.second) return false;
+  }
+  return true;
 }
 
 void startCUptiPCSamplingHandler(int signum) {
-    // start CUPTI pc sampling when receiving signal SIGUSR1
-    if (signum == SIGUSR1) {
-        // do_backtrace();
-        DEBUG_LOG("pc sampling start signal received\n");
-        g_contextInfoMutex.lock();
-        for (auto& itr: g_contextInfoMap)
-        {
-            CUcontext ctx = itr.first;
-            CUpti_PCSamplingStartParams pcSamplingStartParams = {};
-            pcSamplingStartParams.size = CUpti_PCSamplingStartParamsSize;
-            pcSamplingStartParams.ctx = ctx;
+  // start CUPTI pc sampling when receiving signal SIGUSR1
+  if (signum == SIGUSR1) {
+    // do_backtrace();
+    DEBUG_LOG("CUDA PC sampling start signal received\n");
+    g_contextInfoMutex.lock();
+    for (auto& itr: g_contextInfoMap) {
+      CUcontext ctx = itr.first;
+      CUpti_PCSamplingStartParams pcSamplingStartParams = {};
+      pcSamplingStartParams.size = CUpti_PCSamplingStartParamsSize;
+      pcSamplingStartParams.ctx = ctx;
 
-            DEBUG_LOG("starting pc sampling for context %u\n", itr.second->contextUid);
-            CUPTI_CALL(cuptiPCSamplingStart(&pcSamplingStartParams));
-        }
-        g_contextInfoMutex.unlock();
-        g_stopSamplingMutex.lock();
-        g_pcSamplingStarted = true;
-        DEBUG_LOG("g_pcSamplingStarted set to true\n");
-        g_stopSamplingMutex.unlock();
+      DEBUG_LOG("starting CUDA PC sampling for context %u\n", itr.second->contextUid);
+      CUPTI_CALL(cuptiPCSamplingStart(&pcSamplingStartParams));
     }
+    g_contextInfoMutex.unlock();
+
+    g_stopSamplingMutex.lock();
+    g_pcSamplingStarted = true;
+    g_stopSamplingMutex.unlock();
+    DEBUG_LOG("g_pcSamplingStarted set to true\n");
+  }
 }
 
 void stopCUptiPCSamplingHandler(int signum) {
     // stop CUPTI pc sampling when receiving signal SIGUSR2
-    if (g_pcSamplingStarted && signum == SIGUSR2)
-    {
+    if (g_pcSamplingStarted && signum == SIGUSR2) {
         DEBUG_LOG("stop pc sampling signal received\n");
         CollectPCSamples();
 
         g_contextInfoMutex.lock();
-        for (auto& itr: g_contextInfoMap)
-        {
+        for (auto& itr: g_contextInfoMap) {
             DEBUG_LOG("stopping pc sampling for context %u\n", itr.second->contextUid);
             CUcontext ctx = itr.first;
             CUpti_PCSamplingStopParams pcSamplingStopParams = {};
@@ -1216,15 +1207,16 @@ void stopCUptiPCSamplingHandler(int signum) {
 
         CollectPCSamples();
 
-        if (g_buffersGetUtilisedFasterThanStore)
-        {
-            std::cout << "WARNING : Buffers get used faster than get stored in file. Suggestion is either increase size of buffer or increase number of buffers" << std::endl;
+        if (g_buffersGetUtilisedFasterThanStore) {
+            std::cout << "WARNING: Buffers get used faster than get stored 
+            in file. Suggestion is either increase size of buffer or increase 
+            number of buffers" << std::endl;
         }
 
         g_stopSamplingMutex.lock();
         g_pcSamplingStarted = false;
-        DEBUG_LOG("g_pcSamplingStarted set to false\n");
         g_stopSamplingMutex.unlock();
+        DEBUG_LOG("g_pcSamplingStarted set to false\n");
     }
 }
 
@@ -1237,12 +1229,12 @@ void startPCThreadSyncHanlder(int signum) {
         g_kernelThreadSyncedMap[tid] = true;
         if (tid == selectedTid) {
             DEBUG_LOG("[pid=%u, tid=%u] in start, waiting for all threads sync\n", (uint32_t)gettid(), (uint32_t)pthread_self());
-            while (!checkSyncMap());
+            while (!checkSyncMap()) { }
             DEBUG_LOG("[pid=%u, tid=%u] in start, all kernel-launching thread synced\n", (uint32_t)gettid(), (uint32_t)pthread_self());
             startCUptiPCSamplingHandler(signum);
         } else {
             DEBUG_LOG("[pid=%u, tid=%u] in start, thread not selected, waiting for starting\n", (uint32_t)gettid(), (uint32_t)pthread_self());
-            while (!g_pcSamplingStarted);
+            while (!g_pcSamplingStarted) { }
         }
         g_kernelThreadSyncedMap[tid] = false;
         DEBUG_LOG("[pid=%u, tid=%u] PC sampling started, continue launching kernels\n", (uint32_t)gettid(), (uint32_t)pthread_self());
@@ -1262,12 +1254,12 @@ void stopPCThreadSyncHandler(int signum) {
         g_kernelThreadSyncedMap[tid] = true;
         if (tid == selectedTid) {
             DEBUG_LOG("[pid=%u, tid=%u] in stop, waiting for all threads sync\n", (uint32_t)gettid(), (uint32_t)pthread_self());
-            while (!checkSyncMap());
+            while (!checkSyncMap()) { }
             DEBUG_LOG("[pid=%u, tid=%u] in stop, all kernel-launching thread synced\n", (uint32_t)gettid(), (uint32_t)pthread_self());
             stopCUptiPCSamplingHandler(signum);
         } else {
             DEBUG_LOG("[pid=%u, tid=%u] in stop, thread not selected, waiting for stopping\n", (uint32_t)gettid(), (uint32_t)pthread_self());
-            while (g_pcSamplingStarted);
+            while (g_pcSamplingStarted) { }
         }
         g_kernelThreadSyncedMap[tid] = false;
         DEBUG_LOG("[pid=%u, tid=%u] PC sampling stopped, continue launching kernels\n", (uint32_t)gettid(), (uint32_t)pthread_self());
