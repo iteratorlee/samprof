@@ -466,22 +466,23 @@ static void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSampling
 }
 
 static void CollectPCSamples() {
-    for(auto& itr: g_contextInfoMap)
-    {
-        DEBUG_LOG("collecting pc samples left in context %u\n", itr.second->contextUid);
-        CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = {};
+    for (auto& itr : g_contextInfoMap) {
+        DEBUG_LOG("Collecting remaining CUDA PC samples in context %u\n",
+                    itr.second->contextUid);
+        
+        CUpti_PCSamplingGetDataParams pcSamplingGetDataParams = { };
         pcSamplingGetDataParams.size = CUpti_PCSamplingGetDataParamsSize;
         pcSamplingGetDataParams.ctx = itr.first;
 
-        while (itr.second->pcSamplingData.remainingNumPcs > 0 || itr.second->pcSamplingData.totalNumPcs > 0)
-        {
-            DEBUG_LOG("remainingNumPcs=%lu, totoalNumPcs=%lu\n", itr.second->pcSamplingData.remainingNumPcs, itr.second->pcSamplingData.totalNumPcs);
+        while (itr.second->pcSamplingData.remainingNumPcs > 0 
+            || itr.second->pcSamplingData.totalNumPcs > 0) {
+            DEBUG_LOG("remainingNumPcs=%lu, totoalNumPcs=%lu\n", 
+                           itr.second->pcSamplingData.remainingNumPcs,
+                           itr.second->pcSamplingData.totalNumPcs);
             GetPcSamplingDataFromCupti(pcSamplingGetDataParams, itr.second);
         }
-        DEBUG_LOG("collecting remaining pc samples finished\n");
-
-        if (itr.second->pcSamplingData.totalNumPcs > 0)
-        {
+        
+        if (itr.second->pcSamplingData.totalNumPcs > 0) {
             g_pcSampDataQueueMutex.lock();
             // It is quite possible that after pc sampling disabled cupti fill remaining records
             // collected lately from hardware in provided buffer during configuration.
@@ -489,7 +490,7 @@ static void CollectPCSamples() {
             g_pcSampDataQueueMutex.unlock();
         }
     }
-    DEBUG_LOG("collecting left pc samples finished\n");
+    DEBUG_LOG("Collecting remaining CUDA PC samples for all contexts done.\n");
 }
 
 static void PreallocateBuffersForRecords()
@@ -510,27 +511,22 @@ static void PreallocateBuffersForRecords()
 
 static void FreePreallocatedMemory()
 {
-    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++)
-    {
-        for (size_t i = 0; i < g_circularBuffer[buffers].collectNumPcs; i++)
-        {
+    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++) {
+        for (size_t i = 0; i < g_circularBuffer[buffers].collectNumPcs; i++) {
             free(g_circularBuffer[buffers].pPcData[i].stallReason);
         }
 
         free(g_circularBuffer[buffers].pPcData);
     }
 
-    for(auto& itr: g_contextInfoMap)
-    {
+    for(auto& itr: g_contextInfoMap) {
         // free PC sampling buffer
-        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
-        {
+        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++) {
             free(itr.second->pcSamplingData.pPcData[i].stallReason);
         }
         free(itr.second->pcSamplingData.pPcData);
 
-        for (size_t i = 0; i < itr.second->pcSamplingStallReasons.numStallReasons; i++)
-        {
+        for (size_t i = 0; i < itr.second->pcSamplingStallReasons.numStallReasons; i++) {
             free(itr.second->pcSamplingStallReasons.stallReasons[i]);
         }
         free(itr.second->pcSamplingStallReasons.stallReasons);
@@ -539,17 +535,14 @@ static void FreePreallocatedMemory()
         free(itr.second);
     }
 
-    for(auto& itr: g_contextInfoToFreeInEndVector)
-    {
+    for(auto& itr: g_contextInfoToFreeInEndVector) {
         // free PC sampling buffer
-        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
-        {
+        for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++) {
             free(itr->pcSamplingData.pPcData[i].stallReason);
         }
         free(itr->pcSamplingData.pPcData);
 
-        for (size_t i = 0; i < itr->pcSamplingStallReasons.numStallReasons; i++)
-        {
+        for (size_t i = 0; i < itr->pcSamplingStallReasons.numStallReasons; i++) {
             free(itr->pcSamplingStallReasons.stallReasons[i]);
         }
         free(itr->pcSamplingStallReasons.stallReasons);
@@ -561,9 +554,9 @@ static void FreePreallocatedMemory()
 
 void ConfigureActivity(CUcontext cuCtx)
 {
-    std::map<CUcontext, ContextInfo*>::iterator contextStateMapItr = g_contextInfoMap.find(cuCtx);
-    if (contextStateMapItr == g_contextInfoMap.end())
-    {
+    std::map<CUcontext, ContextInfo*>::iterator contextStateMapItr = 
+                        g_contextInfoMap.find(cuCtx);
+    if (contextStateMapItr == g_contextInfoMap.end()) {
         std::cout << "Error : No ctx found" << std::endl;
         exit (-1);
     }
@@ -586,8 +579,7 @@ void ConfigureActivity(CUcontext cuCtx)
     g_stallReasonsCountMutex.lock();
     CUPTI_CALL(cuptiPCSamplingGetNumStallReasons(&numStallReasonsParams));
 
-    if (!g_collectedStallReasonsCount)
-    {
+    if (!g_collectedStallReasonsCount) {
         stallReasonsCount = numStallReasons;
         g_collectedStallReasonsCount = true;
     }
@@ -595,15 +587,14 @@ void ConfigureActivity(CUcontext cuCtx)
 
     char **pStallReasons = (char **)malloc(numStallReasons * sizeof(char*));
     MEMORY_ALLOCATION_CALL(pStallReasons);
-    for (size_t i = 0; i < numStallReasons; i++)
-    {
+    for (size_t i = 0; i < numStallReasons; i++) {
         pStallReasons[i] = (char *)malloc(CUPTI_STALL_REASON_STRING_SIZE * sizeof(char));
         MEMORY_ALLOCATION_CALL(pStallReasons[i]);
     }
     uint32_t *pStallReasonIndex = (uint32_t *)malloc(numStallReasons * sizeof(uint32_t));
     MEMORY_ALLOCATION_CALL(pStallReasonIndex);
 
-    CUpti_PCSamplingGetStallReasonsParams stallReasonsParams = {};
+    CUpti_PCSamplingGetStallReasonsParams stallReasonsParams = { };
     stallReasonsParams.size = CUpti_PCSamplingGetStallReasonsParamsSize;
     stallReasonsParams.ctx = cuCtx;
     stallReasonsParams.numStallReasons = numStallReasons;
@@ -614,13 +605,19 @@ void ConfigureActivity(CUcontext cuCtx)
     // User buffer to hold collected PC Sampling data in PC-To-Counter format
     size_t pcSamplingDataSize = sizeof(CUpti_PCSamplingData);
     contextStateMapItr->second->pcSamplingData.size = pcSamplingDataSize;
-    contextStateMapItr->second->pcSamplingData.collectNumPcs = GetProfilerConf()->pcConfigBufRecordCount;
-    contextStateMapItr->second->pcSamplingData.pPcData = (CUpti_PCSamplingPCData *)malloc(GetProfilerConf()->pcConfigBufRecordCount * sizeof(CUpti_PCSamplingPCData));
+    contextStateMapItr->second->pcSamplingData.collectNumPcs = 
+                GetProfilerConf()->pcConfigBufRecordCount;
+    contextStateMapItr->second->pcSamplingData.pPcData = 
+                (CUpti_PCSamplingPCData *)malloc(
+                    GetProfilerConf()->pcConfigBufRecordCount * 
+                        sizeof(CUpti_PCSamplingPCData));
     MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData);
-    for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++)
-    {
-        contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason = (CUpti_PCSamplingStallReason *)malloc(numStallReasons * sizeof(CUpti_PCSamplingStallReason));
-        MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason);
+    for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++) {
+        contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason = 
+            (CUpti_PCSamplingStallReason *)malloc(numStallReasons 
+                    * sizeof(CUpti_PCSamplingStallReason));
+        MEMORY_ALLOCATION_CALL(
+            contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason);
     }
 
     std::vector<CUpti_PCSamplingConfigurationInfo> pcSamplingConfigurationInfo;
@@ -631,16 +628,21 @@ void ConfigureActivity(CUcontext cuCtx)
 
     // set a buffer for each cu context to hold pc samples from cupti
     CUpti_PCSamplingConfigurationInfo samplingDataBuffer = {};
-    samplingDataBuffer.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_DATA_BUFFER;
-    samplingDataBuffer.attributeData.samplingDataBufferData.samplingDataBuffer = (void *)&contextStateMapItr->second->pcSamplingData;
+    samplingDataBuffer.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_DATA_BUFFER;
+    samplingDataBuffer.attributeData.samplingDataBufferData.samplingDataBuffer = 
+            (void *)&contextStateMapItr->second->pcSamplingData;
 
-    sampPeriod.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_PERIOD;
+    sampPeriod.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_PERIOD;
     if (GetProfilerConf()->samplingPeriod) {
-        sampPeriod.attributeData.samplingPeriodData.samplingPeriod = GetProfilerConf()->samplingPeriod;
+        sampPeriod.attributeData.samplingPeriodData.samplingPeriod = 
+                GetProfilerConf()->samplingPeriod;
         pcSamplingConfigurationInfo.push_back(sampPeriod);
     }
 
-    scratchBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
+    scratchBufferSize.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
     if (GetProfilerConf()->scratchBufSize) {
         scratchBufferSize.attributeData.scratchBufferSizeData.scratchBufferSize = GetProfilerConf()->scratchBufSize;
         pcSamplingConfigurationInfo.push_back(scratchBufferSize);
@@ -716,15 +718,15 @@ static void RPCCopyTracingData(GPUProfilingResponse* reply);
 
 void AtExitHandler()
 {
-    // Check for any error occured while pc sampling 
+    // Check for any error occured while PC sampling.
     CUPTI_CALL(cuptiGetLastError());
     if (GetProfilerConf()->noRPC) {
         g_pcSamplingStarted = false;
         g_tracingStarted = false;
     }
-    if (g_pcSamplingStarted){
+    if (g_pcSamplingStarted) {
         DEBUG_LOG("waiting for pc sampling stopping\n");
-        while (g_pcSamplingStarted);
+        while (g_pcSamplingStarted) { }
     }
     DEBUG_LOG("profiling stopped\n");
 
@@ -740,7 +742,9 @@ void AtExitHandler()
     }
 
     if (g_buffersGetUtilisedFasterThanStore) {
-        std::cout << "WARNING : Buffers get used faster than get stored in file. Suggestion is either increase size of buffer or increase number of buffers" << std::endl;
+        std::cout << "WARNING : Buffers get used faster than get stored in 
+        file. Suggestion is either increase size of buffer or increase 
+        number of buffers" << std::endl;
     }
 
     if (GetProfilerConf()->noRPC) {
@@ -784,34 +788,36 @@ void registerAtExitHandler(void) {
 #define DUMP_CUBIN 0
 #define OFFLINE 0
 
+//TODO(lpc0220): What's CUPTIAPI?
 void CUPTIAPI DumpCudaModule(CUpti_CallbackId cbid, void* resourceDescriptor) {
-    const char* pCubin;
-    size_t cubinSize;
-    uint32_t moduleId;
-    CUpti_ModuleResourceData* moduleResourceData = (CUpti_ModuleResourceData*)resourceDescriptor;
+  const char* pCubin;
+  size_t cubinSize;
+  uint32_t moduleId;
+  CUpti_ModuleResourceData* moduleResourceData = 
+            (CUpti_ModuleResourceData*)resourceDescriptor;
 
-    pCubin = moduleResourceData->pCubin;
-    cubinSize = moduleResourceData->cubinSize;
-    moduleId = moduleResourceData->moduleId;
+  pCubin = moduleResourceData->pCubin;
+  cubinSize = moduleResourceData->cubinSize;
+  moduleId = moduleResourceData->moduleId;
 
-    if (cbid == CUPTI_CBID_RESOURCE_MODULE_LOADED) {
-        char *cubinFileName = (char*)malloc(10 * sizeof(char));
-        sprintf(cubinFileName, "%u.cubin", moduleId);
-        DEBUG_LOG("module loaded cubinSize=%lu, moduleId=%u, dumping to cubin file: %s\n", cubinSize, moduleId, cubinFileName);
-        #if DUMP_CUBIN
+  if (cbid == CUPTI_CBID_RESOURCE_MODULE_LOADED) {
+    char *cubinFileName = (char*)malloc(10 * sizeof(char));
+    sprintf(cubinFileName, "%u.cubin", moduleId);
+    DEBUG_LOG("module loaded cubinSize=%lu, moduleId=%u, dumping to cubin file: %s\n", cubinSize, moduleId, cubinFileName);
+    #if DUMP_CUBIN
         FILE* cubin;
         cubin = fopen(cubinFileName, "wb");
         fwrite(pCubin, sizeof(uint8_t), cubinSize, cubin);
         fclose(cubin);
-        #endif
-    }
+    #endif
+  }
 }
 
-void CallbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid, void* cbdata)
+void CallbackHandler(void* userdata, CUpti_CallbackDomain domain,
+                        CUpti_CallbackId cbid, void* cbdata)
 {
     switch (domain) {
-        case CUPTI_CB_DOMAIN_DRIVER_API:
-        {
+        case CUPTI_CB_DOMAIN_DRIVER_API: {
             const CUpti_CallbackData* cbInfo = (CUpti_CallbackData*)cbdata;
 
             switch (cbid) {
