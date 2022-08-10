@@ -771,9 +771,9 @@ void AtExitHandler() {
     }
 
     if (g_buffersGetUtilisedFasterThanStore) {
-        std::cout << "WARNING : Buffers get used faster than get stored in 
-        file. Suggestion is either increase size of buffer or increase 
-        number of buffers" << std::endl;
+        std::cout << "WARNING : Buffers get used faster than get stored in " \
+        "file. Suggestion is either increase size of buffer or increase " \
+        "number of buffers" << std::endl;
     }
 
     if (GetProfilerConf()->noRPC) {
@@ -1019,8 +1019,8 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain,
             g_contextInfoMutex.unlock();
             //TODO(yanli): buggy? no exit?
             if (itr == g_contextInfoMap.end()) {
-              std::cout << "Warning : This context not found in map 
-                            of context which enabled PC sampling."
+              std::cout << "Warning : This context not found in map " \
+                            "of context which enabled PC sampling." 
                         << std::endl;
             }
 
@@ -1250,9 +1250,9 @@ void stopCUptiPCSamplingHandler(int signum) {
         CollectPCSamples();
 
         if (g_buffersGetUtilisedFasterThanStore) {
-            std::cout << "WARNING: Buffers get used faster than get stored 
-            in file. Suggestion is either increase size of buffer or increase 
-            number of buffers" << std::endl;
+            std::cout << "WARNING: Buffers get used faster than get stored " \
+            "in file. Suggestion is either increase size of buffer or increase " \
+            "number of buffers" << std::endl;
         }
 
         g_stopSamplingMutex.lock();
