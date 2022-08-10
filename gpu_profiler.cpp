@@ -1203,7 +1203,7 @@ inline bool checkSyncMap() {
   return true;
 }
 
-}
+} // namespace
 
 void startCUptiPCSamplingHandler(int signum) {
   // start CUPTI pc sampling when receiving signal SIGUSR1
