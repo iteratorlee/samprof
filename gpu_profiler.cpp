@@ -43,19 +43,24 @@
 
 #include "gpu_profiler.h"
 
-static inline void PrintUNWValue(UNWValue& val) {
-    pid_t pid = gettid();
-    pthread_t tid = pthread_self();
-    DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lx:[%s+%lx]\n", (uint32_t)pid, (uint32_t)tid, val.pc, val.funcName.c_str(), val.offset);
+namespace {
+
+inline void PrintUNWValue(UNWValue& val) {
+  //TODO(yanli): buggy? gettid == pthread_self?
+  pid_t pid = gettid();
+  pthread_t tid = pthread_self();
+  DEBUG_LOG("[pid=%u, tid=%u] unwinding: pc=%lx:[%s+%lx]\n",
+                (uint32_t)pid, (uint32_t)tid, val.pc, 
+                val.funcName.c_str(), val.offset);
 }
 
-static const char* PyObj2Str(PyObject* obj) {
+const char* PyObj2Str(PyObject* obj) {
     PyObject* str = PyUnicode_AsEncodedString(obj, "utf-8", "~E~");
     const char* bytes = PyBytes_AS_STRING(str);
     return bytes;
 }
 
-static std::string GetPyLine(std::string pyFileName, int pyLineNumer) {
+std::string GetPyLine(std::string pyFileName, int pyLineNumer) {
     std::fstream inFile;
     std::string lineStr;
     inFile.open(pyFileName);
@@ -65,6 +70,8 @@ static std::string GetPyLine(std::string pyFileName, int pyLineNumer) {
     lineStr.erase(std::remove(lineStr.begin(), lineStr.end(), ' '), lineStr.end());
     return lineStr;
 }
+
+} // namespace
 
 void pyBackTrace(std::queue<UNWValue>& pyFrameQueue) {
     // DEBUG_LOG("[py back trace] entered\n");
@@ -93,13 +100,22 @@ void getRSP(uint64_t *rsp) {
     );
 }
 
-static void PrintCCTMap() {
+namespace {
+
+void PrintCCTMap() {
     for (auto itr: g_CPUCCTMap) {
         itr.second->printTree();
     }
 }
 
-static CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose=false) {
+/**
+ * @brief 
+ * 
+ * @param q 
+ * @param verbose 
+ * @return CallStackStatus 
+ */
+CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose=false) {
     #if DEBUG
     Timer* genCallStackTimer = Timer::GetGlobalTimer("gen_call_stack");
     genCallStackTimer->start();
@@ -166,7 +182,7 @@ do {                                                            \
     else s2.pop();                                              \
 } while (0)
 
-static void DoBackTrace(bool verbose=false) {
+void DoBackTrace(bool verbose=false) {
     // maintaining a cpu cct for each thread
     pthread_t tid = pthread_self();
     if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
@@ -297,7 +313,7 @@ static void DoBackTrace(bool verbose=false) {
     }
 }
 
-static void CopyCPUCCT2ProtoCPUCCT(CPUCCT* cct, CPUCallingContextTree*& tree) {
+void CopyCPUCCT2ProtoCPUCCT(CPUCCT* cct, CPUCallingContextTree*& tree) {
     if (!cct->root) return;
     tree->set_rootid(cct->root->id);
     tree->set_rootpc(cct->root->pc);
@@ -319,7 +335,7 @@ static void CopyCPUCCT2ProtoCPUCCT(CPUCCT* cct, CPUCallingContextTree*& tree) {
     }
 }
 
-static CriticalNodeType IsCriticalNode(CPUCCTNode* node) {
+CriticalNodeType IsCriticalNode(CPUCCTNode* node) {
     std::regex torchOPRegex("at::_ops::(\\S+)::call(\\S+)");
     std::regex tfOPRegex("(\\S+)Op(Kernel)?.+::Compute");
 
@@ -363,7 +379,7 @@ static CriticalNodeType IsCriticalNode(CPUCCTNode* node) {
     return NOT_CRITICAL_NODE;
 }
 
-static void PruneTreeRecursively(CPUCCT* newTree, CPUCCT* oldTree, uint64_t currNewNodeId,
+void PruneTreeRecursively(CPUCCT* newTree, CPUCCT* oldTree, uint64_t currNewNodeId,
                         uint64_t currOldNodeId) {
     auto currNewNode = newTree->nodeMap[currNewNodeId];
     auto currOldNode = oldTree->nodeMap[currOldNodeId];
@@ -388,7 +404,7 @@ static void PruneTreeRecursively(CPUCCT* newTree, CPUCCT* oldTree, uint64_t curr
     }
 }
 
-static void PruneCPUCCT(CCTMAP_t& cctMap) {
+void PruneCPUCCT(CCTMAP_t& cctMap) {
     DEBUG_LOG("pruning cpu cct\n");
     for (auto itr: g_CPUCCTMap) {
         auto key = itr.first;
@@ -403,7 +419,7 @@ static void PruneCPUCCT(CCTMAP_t& cctMap) {
     }
 }
 
-static void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
+void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
     CCTMAP_t PrunedCPUCCTMap;
     if (GetProfilerConf()->pruneCCT) PruneCPUCCT(PrunedCPUCCTMap);
     else PrunedCPUCCTMap = g_CPUCCTMap;
@@ -433,14 +449,14 @@ static void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
     }
 }
 
-static void StorePCSamplesParents(CUpti_PCSamplingData* pPcSamplingData) {
+void StorePCSamplesParents(CUpti_PCSamplingData* pPcSamplingData) {
     for (int i = 0; i < pPcSamplingData->totalNumPcs; ++i) {
         CUpti_PCSamplingPCData* pPcData = &pPcSamplingData->pPcData[i];
         g_GPUPCSamplesParentCPUPCIDs[pPcData] = g_activeCPUPCID;
     }
 }
 
-static void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSamplingGetDataParams, ContextInfo *contextInfo)
+void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSamplingGetDataParams, ContextInfo *contextInfo)
 {
     CUpti_PCSamplingData *pPcSamplingData = NULL;
 
@@ -465,7 +481,7 @@ static void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSampling
     g_pcSampDataQueueMutex.unlock();
 }
 
-static void CollectPCSamples() {
+void CollectPCSamples() {
     for (auto& itr : g_contextInfoMap) {
         DEBUG_LOG("Collecting remaining CUDA PC samples in context %u\n",
                     itr.second->contextUid);
@@ -493,10 +509,8 @@ static void CollectPCSamples() {
     DEBUG_LOG("Collecting remaining CUDA PC samples for all contexts done.\n");
 }
 
-static void PreallocateBuffersForRecords()
-{
-    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++)
-    {
+void PreallocateBuffersForRecords() {
+    for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++) {
         g_circularBuffer[buffers].size = sizeof(CUpti_PCSamplingData);
         g_circularBuffer[buffers].collectNumPcs = GetProfilerConf()->circularbufSize;
         g_circularBuffer[buffers].pPcData = (CUpti_PCSamplingPCData *)malloc(g_circularBuffer[buffers].collectNumPcs * sizeof(CUpti_PCSamplingPCData));
@@ -509,8 +523,7 @@ static void PreallocateBuffersForRecords()
     }
 }
 
-static void FreePreallocatedMemory()
-{
+void FreePreallocatedMemory() {
     for (size_t buffers=0; buffers<GetProfilerConf()->circularbufCount; buffers++) {
         for (size_t i = 0; i < g_circularBuffer[buffers].collectNumPcs; i++) {
             free(g_circularBuffer[buffers].pPcData[i].stallReason);
@@ -552,172 +565,188 @@ static void FreePreallocatedMemory()
     }
 }
 
-void ConfigureActivity(CUcontext cuCtx)
-{
-    std::map<CUcontext, ContextInfo*>::iterator contextStateMapItr = 
-                        g_contextInfoMap.find(cuCtx);
-    if (contextStateMapItr == g_contextInfoMap.end()) {
-        std::cout << "Error : No ctx found" << std::endl;
-        exit (-1);
-    }
+}
 
-    CUpti_PCSamplingConfigurationInfo sampPeriod = {};
-    CUpti_PCSamplingConfigurationInfo stallReason = {};
-    CUpti_PCSamplingConfigurationInfo scratchBufferSize = {};
-    CUpti_PCSamplingConfigurationInfo hwBufferSize = {};
-    CUpti_PCSamplingConfigurationInfo collectionMode = {};
-    CUpti_PCSamplingConfigurationInfo enableStartStop = {};
-    CUpti_PCSamplingConfigurationInfo outputDataFormat = {};
+//TODO(lpc): this function is too big.
+// This function seems buggys or should be simpler.
+void ConfigureActivity(CUcontext cuCtx) {
+  auto contextStateMapItr = g_contextInfoMap.find(cuCtx);
+  if (contextStateMapItr == g_contextInfoMap.end()) {
+    std::cout << "Error : No ctx found" << std::endl;
+    exit (-1);
+  }
 
-    // Get number of supported counters and counter names
-    size_t numStallReasons = 0;
-    CUpti_PCSamplingGetNumStallReasonsParams numStallReasonsParams = {};
-    numStallReasonsParams.size = CUpti_PCSamplingGetNumStallReasonsParamsSize;
-    numStallReasonsParams.ctx = cuCtx;
-    numStallReasonsParams.numStallReasons = &numStallReasons;
+  // Get the number of supported counters and counter names.
+  size_t numStallReasons = 0;
+  CUpti_PCSamplingGetNumStallReasonsParams numStallReasonsParams = {};
+  numStallReasonsParams.size = CUpti_PCSamplingGetNumStallReasonsParamsSize;
+  numStallReasonsParams.ctx = cuCtx;
+  numStallReasonsParams.numStallReasons = &numStallReasons;
 
-    g_stallReasonsCountMutex.lock();
-    CUPTI_CALL(cuptiPCSamplingGetNumStallReasons(&numStallReasonsParams));
+  //TODO(lpc): re-inspect this lock.
+  g_stallReasonsCountMutex.lock();
+  CUPTI_CALL(cuptiPCSamplingGetNumStallReasons(&numStallReasonsParams));
 
-    if (!g_collectedStallReasonsCount) {
-        stallReasonsCount = numStallReasons;
-        g_collectedStallReasonsCount = true;
-    }
-    g_stallReasonsCountMutex.unlock();
+  if (!g_collectedStallReasonsCount) {
+    stallReasonsCount = numStallReasons;
+    g_collectedStallReasonsCount = true;
+  }
+  g_stallReasonsCountMutex.unlock();
 
-    char **pStallReasons = (char **)malloc(numStallReasons * sizeof(char*));
-    MEMORY_ALLOCATION_CALL(pStallReasons);
-    for (size_t i = 0; i < numStallReasons; i++) {
-        pStallReasons[i] = (char *)malloc(CUPTI_STALL_REASON_STRING_SIZE * sizeof(char));
-        MEMORY_ALLOCATION_CALL(pStallReasons[i]);
-    }
-    uint32_t *pStallReasonIndex = (uint32_t *)malloc(numStallReasons * sizeof(uint32_t));
-    MEMORY_ALLOCATION_CALL(pStallReasonIndex);
+  char **pStallReasons = (char **)malloc(numStallReasons * sizeof(char*));
+  MEMORY_ALLOCATION_CALL(pStallReasons);
+  for (size_t i = 0; i < numStallReasons; i++) {
+    pStallReasons[i] = (char *)malloc(CUPTI_STALL_REASON_STRING_SIZE * sizeof(char));
+    MEMORY_ALLOCATION_CALL(pStallReasons[i]);
+  }
+  uint32_t *pStallReasonIndex = (uint32_t *)malloc(numStallReasons * sizeof(uint32_t));
+  MEMORY_ALLOCATION_CALL(pStallReasonIndex);
 
-    CUpti_PCSamplingGetStallReasonsParams stallReasonsParams = { };
-    stallReasonsParams.size = CUpti_PCSamplingGetStallReasonsParamsSize;
-    stallReasonsParams.ctx = cuCtx;
-    stallReasonsParams.numStallReasons = numStallReasons;
-    stallReasonsParams.stallReasonIndex = pStallReasonIndex;
-    stallReasonsParams.stallReasons = pStallReasons;
-    CUPTI_CALL(cuptiPCSamplingGetStallReasons(&stallReasonsParams));
+  CUpti_PCSamplingGetStallReasonsParams stallReasonsParams = { };
+  stallReasonsParams.size = CUpti_PCSamplingGetStallReasonsParamsSize;
+  stallReasonsParams.ctx = cuCtx;
+  stallReasonsParams.numStallReasons = numStallReasons;
+  stallReasonsParams.stallReasonIndex = pStallReasonIndex;
+  stallReasonsParams.stallReasons = pStallReasons;
+  CUPTI_CALL(cuptiPCSamplingGetStallReasons(&stallReasonsParams));
 
-    // User buffer to hold collected PC Sampling data in PC-To-Counter format
-    size_t pcSamplingDataSize = sizeof(CUpti_PCSamplingData);
-    contextStateMapItr->second->pcSamplingData.size = pcSamplingDataSize;
-    contextStateMapItr->second->pcSamplingData.collectNumPcs = 
+  // User buffer to hold collected PC Sampling data in PC-To-Counter format
+  size_t pcSamplingDataSize = sizeof(CUpti_PCSamplingData);
+  contextStateMapItr->second->pcSamplingData.size = pcSamplingDataSize;
+  contextStateMapItr->second->pcSamplingData.collectNumPcs = 
                 GetProfilerConf()->pcConfigBufRecordCount;
-    contextStateMapItr->second->pcSamplingData.pPcData = 
+  contextStateMapItr->second->pcSamplingData.pPcData = 
                 (CUpti_PCSamplingPCData *)malloc(
                     GetProfilerConf()->pcConfigBufRecordCount * 
                         sizeof(CUpti_PCSamplingPCData));
-    MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData);
-    for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++) {
-        contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason = 
-            (CUpti_PCSamplingStallReason *)malloc(numStallReasons 
+  MEMORY_ALLOCATION_CALL(contextStateMapItr->second->pcSamplingData.pPcData);
+  for (uint32_t i = 0; i < GetProfilerConf()->pcConfigBufRecordCount; i++) {
+    contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason = 
+        (CUpti_PCSamplingStallReason *)malloc(numStallReasons 
                     * sizeof(CUpti_PCSamplingStallReason));
-        MEMORY_ALLOCATION_CALL(
-            contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason);
-    }
+    MEMORY_ALLOCATION_CALL(
+        contextStateMapItr->second->pcSamplingData.pPcData[i].stallReason);
+  }
 
-    std::vector<CUpti_PCSamplingConfigurationInfo> pcSamplingConfigurationInfo;
+  std::vector<CUpti_PCSamplingConfigurationInfo> pcSamplingConfigurationInfo;
 
-    stallReason.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_STALL_REASON;
-    stallReason.attributeData.stallReasonData.stallReasonCount = numStallReasons;
-    stallReason.attributeData.stallReasonData.pStallReasonIndex = pStallReasonIndex;
-
-    // set a buffer for each cu context to hold pc samples from cupti
-    CUpti_PCSamplingConfigurationInfo samplingDataBuffer = {};
-    samplingDataBuffer.attributeType = 
-            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_DATA_BUFFER;
-    samplingDataBuffer.attributeData.samplingDataBufferData.samplingDataBuffer = 
-            (void *)&contextStateMapItr->second->pcSamplingData;
-
-    sampPeriod.attributeType = 
+  CUpti_PCSamplingConfigurationInfo sampPeriodConfig = {};
+  sampPeriodConfig.attributeType = 
             CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_PERIOD;
-    if (GetProfilerConf()->samplingPeriod) {
-        sampPeriod.attributeData.samplingPeriodData.samplingPeriod = 
-                GetProfilerConf()->samplingPeriod;
-        pcSamplingConfigurationInfo.push_back(sampPeriod);
-    }
+  if (GetProfilerConf()->samplingPeriod) {
+    sampPeriodConfig.attributeData.samplingPeriodData.samplingPeriod = 
+            GetProfilerConf()->samplingPeriod;
+    pcSamplingConfigurationInfo.push_back(sampPeriodConfig);
+  }
 
-    scratchBufferSize.attributeType = 
+  CUpti_PCSamplingConfigurationInfo scratchBufferSizeConfig = {};
+  scratchBufferSizeConfig.attributeType = 
             CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
-    if (GetProfilerConf()->scratchBufSize) {
-        scratchBufferSize.attributeData.scratchBufferSizeData.scratchBufferSize = GetProfilerConf()->scratchBufSize;
-        pcSamplingConfigurationInfo.push_back(scratchBufferSize);
-    }
+  if (GetProfilerConf()->scratchBufSize) {
+    scratchBufferSizeConfig.attributeData.scratchBufferSizeData.scratchBufferSize = 
+            GetProfilerConf()->scratchBufSize;
+    pcSamplingConfigurationInfo.push_back(scratchBufferSizeConfig);
+  }
 
-    hwBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
-    if (GetProfilerConf()->hwBufSize) {
-        hwBufferSize.attributeData.hardwareBufferSizeData.hardwareBufferSize = GetProfilerConf()->hwBufSize;
-        pcSamplingConfigurationInfo.push_back(hwBufferSize);
-    }
+  CUpti_PCSamplingConfigurationInfo hwBufferSizeConfig = {};
+  hwBufferSizeConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
+  if (GetProfilerConf()->hwBufSize) {
+    hwBufferSizeConfig.attributeData.hardwareBufferSizeData.hardwareBufferSize = 
+            GetProfilerConf()->hwBufSize;
+    pcSamplingConfigurationInfo.push_back(hwBufferSizeConfig);
+  }
 
-    collectionMode.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_COLLECTION_MODE;
-    collectionMode.attributeData.collectionModeData.collectionMode = g_pcSamplingCollectionMode;
-    pcSamplingConfigurationInfo.push_back(collectionMode);
+  CUpti_PCSamplingConfigurationInfo collectionModeConfig = {};
+  collectionModeConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_COLLECTION_MODE;
+  collectionModeConfig.attributeData.collectionModeData.collectionMode = 
+            g_pcSamplingCollectionMode;
+  pcSamplingConfigurationInfo.push_back(collectionModeConfig);
 
-    pcSamplingConfigurationInfo.push_back(stallReason);
-    pcSamplingConfigurationInfo.push_back(samplingDataBuffer);
+
+  CUpti_PCSamplingConfigurationInfo stallReasonConfig = {};
+  stallReasonConfig.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_STALL_REASON;
+  stallReasonConfig.attributeData.stallReasonData.stallReasonCount = numStallReasons;
+  stallReasonConfig.attributeData.stallReasonData.pStallReasonIndex = pStallReasonIndex;
+  pcSamplingConfigurationInfo.push_back(stallReasonConfig);
+
+  // set a buffer for each cu context to hold pc samples from cupti
+  CUpti_PCSamplingConfigurationInfo samplingDataBufferConfig = {};
+  samplingDataBufferConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SAMPLING_DATA_BUFFER;
+  samplingDataBufferConfig.attributeData.samplingDataBufferData.samplingDataBuffer = 
+            (void *)&contextStateMapItr->second->pcSamplingData;
+  pcSamplingConfigurationInfo.push_back(samplingDataBufferConfig);
     
-    enableStartStop.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_ENABLE_START_STOP_CONTROL;
-    uint32_t enableStartStopControl = GetProfilerConf()->noRPC && !GetProfilerConf()->noSampling ? 0 : 1;
-    enableStartStop.attributeData.enableStartStopControlData.enableStartStopControl = enableStartStopControl;
-    pcSamplingConfigurationInfo.push_back(enableStartStop);
+  CUpti_PCSamplingConfigurationInfo enableStartStopConfig = {};
+  enableStartStopConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_ENABLE_START_STOP_CONTROL;
+  uint32_t enableStartStopControl = 
+            GetProfilerConf()->noRPC && !GetProfilerConf()->noSampling ? 0 : 1;
+  enableStartStopConfig.attributeData.enableStartStopControlData.enableStartStopControl = 
+            enableStartStopControl;
+  pcSamplingConfigurationInfo.push_back(enableStartStopConfig);
 
-    CUpti_PCSamplingConfigurationInfoParams pcSamplingConfigurationInfoParams = {};
-    pcSamplingConfigurationInfoParams.size = CUpti_PCSamplingConfigurationInfoParamsSize;
-    pcSamplingConfigurationInfoParams.pPriv = NULL;
-    pcSamplingConfigurationInfoParams.ctx = cuCtx;
-    pcSamplingConfigurationInfoParams.numAttributes = pcSamplingConfigurationInfo.size();
-    pcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo = pcSamplingConfigurationInfo.data();
+  CUpti_PCSamplingConfigurationInfoParams pcSamplingConfigurationInfoParams = {};
+  pcSamplingConfigurationInfoParams.size = CUpti_PCSamplingConfigurationInfoParamsSize;
+  pcSamplingConfigurationInfoParams.pPriv = NULL;
+  pcSamplingConfigurationInfoParams.ctx = cuCtx;
+  pcSamplingConfigurationInfoParams.numAttributes = pcSamplingConfigurationInfo.size();
+  pcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo = pcSamplingConfigurationInfo.data();
+  CUPTI_CALL(cuptiPCSamplingSetConfigurationAttribute(&pcSamplingConfigurationInfoParams));
 
-    CUPTI_CALL(cuptiPCSamplingSetConfigurationAttribute(&pcSamplingConfigurationInfoParams));
+  // Store all stall reasons info in context info to dump into the file.
+  contextStateMapItr->second->pcSamplingStallReasons.numStallReasons = numStallReasons;
+  contextStateMapItr->second->pcSamplingStallReasons.stallReasons = pStallReasons;
+  contextStateMapItr->second->pcSamplingStallReasons.stallReasonIndex = pStallReasonIndex;
 
-    // Store all stall reasons info in context info to dump into the file.
-    contextStateMapItr->second->pcSamplingStallReasons.numStallReasons = numStallReasons;
-    contextStateMapItr->second->pcSamplingStallReasons.stallReasons = pStallReasons;
-    contextStateMapItr->second->pcSamplingStallReasons.stallReasonIndex = pStallReasonIndex;
+  // Find configuration info and store it in context info to dump in file.
+  // TODO(lpc): comment out below, as they are defined above. Need to test correctness.
+  scratchBufferSizeConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
+  hwBufferSizeConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
+  enableStartStopConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_ENABLE_START_STOP_CONTROL;
 
-    // Find configuration info and store it in context info to dump in file.
-    scratchBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_SCRATCH_BUFFER_SIZE;
-    hwBufferSize.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_HARDWARE_BUFFER_SIZE;
-    enableStartStop.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_ENABLE_START_STOP_CONTROL;
-    outputDataFormat.attributeType = CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_OUTPUT_DATA_FORMAT;
-    outputDataFormat.attributeData.outputDataFormatData.outputDataFormat = CUPTI_PC_SAMPLING_OUTPUT_DATA_FORMAT_PARSED;
+  CUpti_PCSamplingConfigurationInfo outputDataFormatConfig = {};
+  outputDataFormatConfig.attributeType = 
+            CUPTI_PC_SAMPLING_CONFIGURATION_ATTR_TYPE_OUTPUT_DATA_FORMAT;
+  outputDataFormatConfig.attributeData.outputDataFormatData.outputDataFormat = 
+            CUPTI_PC_SAMPLING_OUTPUT_DATA_FORMAT_PARSED;
 
-    std::vector<CUpti_PCSamplingConfigurationInfo> pcSamplingRetrieveConfigurationInfo;
-    pcSamplingRetrieveConfigurationInfo.push_back(collectionMode);
-    pcSamplingRetrieveConfigurationInfo.push_back(sampPeriod);
-    pcSamplingRetrieveConfigurationInfo.push_back(scratchBufferSize);
-    pcSamplingRetrieveConfigurationInfo.push_back(hwBufferSize);
-    pcSamplingRetrieveConfigurationInfo.push_back(enableStartStop);
+  //TODO(lpc): don't understand the following.
+  std::vector<CUpti_PCSamplingConfigurationInfo> pcSamplingRetrieveConfigurationInfo;
+  pcSamplingRetrieveConfigurationInfo.push_back(collectionModeConfig);
+  pcSamplingRetrieveConfigurationInfo.push_back(sampPeriodConfig);
+  pcSamplingRetrieveConfigurationInfo.push_back(scratchBufferSizeConfig);
+  pcSamplingRetrieveConfigurationInfo.push_back(hwBufferSizeConfig);
+  pcSamplingRetrieveConfigurationInfo.push_back(enableStartStopConfig);
 
-    CUpti_PCSamplingConfigurationInfoParams getPcSamplingConfigurationInfoParams = {};
-    getPcSamplingConfigurationInfoParams.size = CUpti_PCSamplingConfigurationInfoParamsSize;
-    getPcSamplingConfigurationInfoParams.pPriv = NULL;
-    getPcSamplingConfigurationInfoParams.ctx = cuCtx;
-    getPcSamplingConfigurationInfoParams.numAttributes = pcSamplingRetrieveConfigurationInfo.size();
-    getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo = pcSamplingRetrieveConfigurationInfo.data();
+  CUpti_PCSamplingConfigurationInfoParams getPcSamplingConfigurationInfoParams = {};
+  getPcSamplingConfigurationInfoParams.size = CUpti_PCSamplingConfigurationInfoParamsSize;
+  getPcSamplingConfigurationInfoParams.pPriv = NULL;
+  getPcSamplingConfigurationInfoParams.ctx = cuCtx;
+  getPcSamplingConfigurationInfoParams.numAttributes = 
+            pcSamplingRetrieveConfigurationInfo.size();
+  getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo =
+            pcSamplingRetrieveConfigurationInfo.data();
+  CUPTI_CALL(cuptiPCSamplingGetConfigurationAttribute(&getPcSamplingConfigurationInfoParams));
 
-    CUPTI_CALL(cuptiPCSamplingGetConfigurationAttribute(&getPcSamplingConfigurationInfoParams));
+  for (size_t i = 0; i < getPcSamplingConfigurationInfoParams.numAttributes; i++) {
+    contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(
+        getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[i]);
+  }
 
-    for (size_t i = 0; i < getPcSamplingConfigurationInfoParams.numAttributes; i++) {
-        contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(getPcSamplingConfigurationInfoParams.pPCSamplingConfigurationInfo[i]);
-    }
-
-    contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(outputDataFormat);
-    contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(stallReason);
-
-    return;
+  contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(outputDataFormatConfig);
+  contextStateMapItr->second->pcSamplingConfigurationInfo.push_back(stallReasonConfig);
 }
 
 // forward declaration
 static void RPCCopyTracingData(GPUProfilingResponse* reply);
 
-void AtExitHandler()
-{
+void AtExitHandler() {
     // Check for any error occured while PC sampling.
     CUPTI_CALL(cuptiGetLastError());
     if (GetProfilerConf()->noRPC) {
@@ -782,7 +811,7 @@ void AtExitHandler()
 }
 
 void registerAtExitHandler(void) {
-    atexit(&AtExitHandler);
+  atexit(&AtExitHandler);
 }
 
 #define DUMP_CUBIN 0
@@ -818,7 +847,6 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain,
   switch (domain) {
     case CUPTI_CB_DOMAIN_DRIVER_API: {
       const CUpti_CallbackData* cbInfo = (CUpti_CallbackData*)cbdata;
-
       switch (cbid) {
         case CUPTI_DRIVER_TRACE_CBID_cuLaunch:
         case CUPTI_DRIVER_TRACE_CBID_cuLaunchGrid:
@@ -1166,11 +1194,15 @@ static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
     }
 }
 
-static inline bool checkSyncMap() {
+namespace {
+
+inline bool checkSyncMap() {
   for (auto ts : g_kernelThreadSyncedMap) {
     if (!ts.second) return false;
   }
   return true;
+}
+
 }
 
 void startCUptiPCSamplingHandler(int signum) {
@@ -1358,15 +1390,15 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
 }
 
 void CollectCPUSamplerData() {
-    while (g_cpuSamplerCollection->IsRunning()) {
-        auto tid2CallStack = g_cpuSamplerCollection->CollectData();
-        for (auto itr: tid2CallStack) {
-            auto pid = itr.first;
-            auto callStack = itr.second;
-            UpdateCCT(pid, callStack, true);
-        }
+  while (g_cpuSamplerCollection->IsRunning()) {
+    auto tid2CallStack = g_cpuSamplerCollection->CollectData();
+    for (auto itr: tid2CallStack) {
+      auto pid = itr.first;
+      auto callStack = itr.second;
+      UpdateCCT(pid, callStack, true);
     }
-    DEBUG_LOG("cpu sampler not running, stop collecting cpu pc data\n");
+  }
+  DEBUG_LOG("cpu sampler not running, stop collecting cpu pc data\n");
 }
 
 class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
@@ -1484,70 +1516,69 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
 
 
 void RunServer() {
-    std::string server_address("0.0.0.0:8886");
-    ServerBuilder builder;
-    GPUProfilingServiceImpl service;
+  std::string server_address("0.0.0.0:8886");
+  ServerBuilder builder;
+  GPUProfilingServiceImpl service;
 
-    grpc::EnableDefaultHealthCheckService(true);
-    grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+  grpc::EnableDefaultHealthCheckService(true);
+  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 
-    builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
+  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
 
-    server = builder.BuildAndStart();
-    DEBUG_LOG("Server listeninig on %s\n", server_address.c_str());
+  server = builder.BuildAndStart();
+  DEBUG_LOG("Server listeninig on %s\n", server_address.c_str());
 
-    server->Wait();
+  server->Wait();
 }
 
-extern "C" int InitializeInjection(void)
-{
-    g_initializeInjectionMutex.lock();
-    if (!g_initializedInjection) {
-        DEBUG_LOG("... Initialize injection ...\n");
+extern "C" int InitializeInjection(void) {
+  g_initializeInjectionMutex.lock();
+  if (!g_initializedInjection) {
+    DEBUG_LOG("... Initialize injection ...\n");
 
-        g_cpuSamplerCollection = new CPUCallStackSamplerCollection();
+    g_cpuSamplerCollection = new CPUCallStackSamplerCollection();
 
-        g_circularBuffer.resize(GetProfilerConf()->circularbufCount);
-        g_bufferEmptyTrackerArray.resize(GetProfilerConf()->circularbufCount, false);
+    g_circularBuffer.resize(GetProfilerConf()->circularbufCount);
+    g_bufferEmptyTrackerArray.resize(GetProfilerConf()->circularbufCount, false);
 
-        // CUpti_SubscriberHandle subscriber;
-        CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)&CallbackHandler, NULL));
+    // CUpti_SubscriberHandle subscriber;
+    CUPTI_CALL(cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)&CallbackHandler, NULL));
 
-        // Subscribe for all domains
-        CUPTI_CALL(cuptiEnableAllDomains(1, subscriber));
+    // Subscribe for all domains
+    CUPTI_CALL(cuptiEnableAllDomains(1, subscriber));
 
-        g_initializedInjection = true;
-    }
+    g_initializedInjection = true;
+  }
     
-    signal(SIGUSR1, startPCThreadSyncHanlder);
-    signal(SIGUSR2, stopPCThreadSyncHandler);
+  signal(SIGUSR1, startPCThreadSyncHanlder);
+  signal(SIGUSR2, stopPCThreadSyncHandler);
 
-    if (GetProfilerConf()->noRPC) {
-        g_pcSamplingStarted = true;
-        g_cpuSamplerCollection->EnableSampling();
-        g_tracingStarted = true;
-        g_reply = new GPUProfilingResponse();
-        if (!GetProfilerConf()->noSampling) {
-            g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
-        }
-        if (GetProfilerConf()->enableCPUSampling) {
-            g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
-        }
-    } else {
-        g_rpcServerThreadHandle = std::thread(RunServer);
+  if (GetProfilerConf()->noRPC) {
+    g_pcSamplingStarted = true;
+    g_cpuSamplerCollection->EnableSampling();
+    g_tracingStarted = true;
+    g_reply = new GPUProfilingResponse();
+    if (!GetProfilerConf()->noSampling) {
+        g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
     }
+    if (GetProfilerConf()->enableCPUSampling) {
+        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+    }
+  } else {
+    g_rpcServerThreadHandle = std::thread(RunServer);
+  }
 
-    DEBUG_LOG("main thread pid=%u\n", (uint32_t)getpid());
-    GetProfilerConf()->mainThreadTid = pthread_self();
+  DEBUG_LOG("main thread pid=%u\n", (uint32_t)getpid());
+  GetProfilerConf()->mainThreadTid = pthread_self();
 
-    registerAtExitHandler();
-    g_initializeInjectionMutex.unlock();
+  registerAtExitHandler();
+  g_initializeInjectionMutex.unlock();
 
-    return 1;
+  return 1;
 }
 
 int main() {
-    InitializeInjection();
-    return 0;
+  InitializeInjection();
+  return 0;
 }
