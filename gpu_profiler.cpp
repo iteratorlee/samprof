@@ -1099,7 +1099,9 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain,
   }
 }
 
-static void RPCCopyTracingData(GPUProfilingResponse* reply) {
+namespace {
+
+void RPCCopyTracingData(GPUProfilingResponse* reply) {
     DEBUG_LOG("rpc copy started [tracing]\n");
 
     gpuprofiling::CUptiPCSamplingData* pcSampDataProto = reply->add_pcsamplingdata();
@@ -1143,7 +1145,7 @@ static void RPCCopyTracingData(GPUProfilingResponse* reply) {
     }
 }
 
-static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
+void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
     bool to_break = false;
     DEBUG_LOG("rpc copy thread created [sampling]\n");
     while (true) {
@@ -1193,8 +1195,6 @@ static void RPCCopyPCSamplingData(GPUProfilingResponse* reply) {
         if (to_break) break;
     }
 }
-
-namespace {
 
 inline bool checkSyncMap() {
   for (auto ts : g_kernelThreadSyncedMap) {
