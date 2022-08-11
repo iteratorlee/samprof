@@ -115,59 +115,73 @@ void PrintCCTMap() {
  * @param verbose 
  * @return CallStackStatus 
  */
-CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose=false) {
-    #if DEBUG
-    Timer* genCallStackTimer = Timer::GetGlobalTimer("gen_call_stack");
-    genCallStackTimer->start();
-    #endif
-    std::queue<UNWValue> pyFrameQueue;
-    CallStackStatus status;
-    if (GetProfilerConf()->backEnd == "TORCH") pyBackTrace(pyFrameQueue);
-    if (pyFrameQueue.size()) status = CALL_STACK_HAS_PY;
-    else status = CALL_STACK_NOT_HAS_PY;
+CallStackStatus GenerateCallStacks(std::stack<UNWValue> &q, bool verbose=false) {
+#if DEBUG
+  Timer* genCallStackTimer = Timer::GetGlobalTimer("gen_call_stack");
+  genCallStackTimer->start();
+#endif
 
-    unw_cursor_t cursor;
-    unw_context_t context;
+  CallStackStatus status;
 
-    unw_getcontext(&context);
-    unw_init_local(&cursor, &context);
+  // Get python stack traces.
+  std::queue<UNWValue> pyFrameQueue;
+  if (GetProfilerConf()->backEnd == "TORCH") {
+    pyBackTrace(pyFrameQueue);
+  }
 
-    while (unw_step(&cursor) > 0) {
-        unw_word_t offset, pc;
-        char fname[FUNC_NAME_LENGTH];
-        char* outer_name;
-        
-        unw_get_reg(&cursor, UNW_REG_IP, &pc);
-        auto getProcTimer = Timer::GetGlobalTimer("unwinding_get_proc_name");
-        getProcTimer->start();
-        unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
-        getProcTimer->stop();
-        int status = 99;
-        if ((outer_name = abi::__cxa_demangle(fname, nullptr, nullptr, &status)) == 0) {
-            outer_name = fname;
-        }
+  if (pyFrameQueue.size()) {
+    status = CALL_STACK_HAS_PY;
+  } else {
+    status = CALL_STACK_NOT_HAS_PY;
+  }
 
-        // skip cupti-related stack frames
-        if (HasExcludePatterns(outer_name)) continue;
+  unw_cursor_t cursor;
+  unw_context_t context;
 
-        if (GetProfilerConf()->backEnd == "TORCH" && std::string(outer_name).find("_PyEval_EvalFrameDefault") != std::string::npos) {
-            UNWValue value = pyFrameQueue.front();
-            value.pc = pc + value.offset; // use native pc plus offset as PyFrame pc
-            q.push(value);
-            pyFrameQueue.pop();
-        } else {
-            UNWValue value(pc, offset, std::string(outer_name));
-            q.push(value);
-        }
-        if (verbose) {
-            PrintUNWValue(q.top());
-        }
+  unw_getcontext(&context);
+  unw_init_local(&cursor, &context);
+
+  while (unw_step(&cursor) > 0) {
+    unw_word_t offset, pc;
+    char fname[FUNC_NAME_LENGTH];
+    char* outer_name;
+    
+    unw_get_reg(&cursor, UNW_REG_IP, &pc);
+    auto getProcTimer = Timer::GetGlobalTimer("unwinding_get_proc_name");
+    getProcTimer->start();
+    unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
+    getProcTimer->stop();
+
+    int status_demangle = 99;
+    if ((outer_name = abi::__cxa_demangle(fname, nullptr, nullptr,
+                    &status_demangle)) == 0) {
+      outer_name = fname;
     }
 
-    #if DEBUG
-    genCallStackTimer->stop();
-    #endif
-    return status;
+    // skip cupti-related stack frames
+    if (HasExcludePatterns(outer_name)) continue;
+
+    if (GetProfilerConf()->backEnd == "TORCH" && std::string(outer_name).find(
+                    "_PyEval_EvalFrameDefault") != std::string::npos) {
+      UNWValue value = pyFrameQueue.front();
+      value.pc = pc + value.offset; // use native pc plus offset as PyFrame pc
+      q.push(value);
+      pyFrameQueue.pop();
+    } else {
+      UNWValue value(pc, offset, std::string(outer_name));
+      q.push(value);
+    }
+
+    if (verbose) {
+      PrintUNWValue(q.top());
+    }
+  }
+
+#if DEBUG
+  genCallStackTimer->stop();
+#endif
+
+  return status;
 }
 
 #define TOP2(s1, s2, val)                                       \
@@ -233,7 +247,7 @@ void DoBackTrace(bool verbose=false) {
     std::stack<UNWValue> toInsertUNW;
     std::stack<UNWValue> toInsertUNWMain;
 
-    auto status = GenCallStack(toInsertUNW, verbose);
+    auto status = GenerateCallStacks(toInsertUNW, verbose);
 
     // if the backend is Pytorch, and current thread has not PyFrame
     // go to the main thread for PyFrame
@@ -1282,7 +1296,7 @@ void startPCThreadSyncHanlder(int signum) {
         DEBUG_LOG("[pid=%u, tid=%u] PC sampling started, continue launching kernels\n", (uint32_t)gettid(), (uint32_t)pthread_self());
     } else if (g_genCallStack) {
         DEBUG_LOG("back trace signal received\n");
-        GenCallStack(g_callStack);
+        GenerateCallStacks(g_callStack);
         g_genCallStack = false;
     }
 }
