@@ -55,57 +55,57 @@ inline void PrintUNWValue(UNWValue& val) {
 }
 
 const char* PyObj2Str(PyObject* obj) {
-    PyObject* str = PyUnicode_AsEncodedString(obj, "utf-8", "~E~");
-    const char* bytes = PyBytes_AS_STRING(str);
-    return bytes;
+  return (const char*)PyBytes_AS_STRING(
+            PyUnicode_AsEncodedString(obj, "utf-8", "~E~")
+         );
 }
 
 std::string GetPyLine(std::string pyFileName, int pyLineNumer) {
-    std::fstream inFile;
-    std::string lineStr;
-    inFile.open(pyFileName);
-    int i = 1;
-    while (std::getline(inFile, lineStr) && i < pyLineNumer) ++i;
-    inFile.close();
-    lineStr.erase(std::remove(lineStr.begin(), lineStr.end(), ' '), lineStr.end());
-    return lineStr;
+  std::fstream inFile;
+  std::string lineStr;
+  inFile.open(pyFileName);
+  int i = 1;
+  while (std::getline(inFile, lineStr) && i < pyLineNumer) ++i;
+  inFile.close();
+  lineStr.erase(std::remove(lineStr.begin(), lineStr.end(), ' '), lineStr.end());
+  return lineStr;
 }
 
 } // namespace
 
 void pyBackTrace(std::queue<UNWValue>& pyFrameQueue) {
-    // DEBUG_LOG("[py back trace] entered\n");
-    PyInterpreterState* mainInterpState = PyInterpreterState_Main();
-    //PyThreadState* pyState = PyInterpreterState_ThreadHead(mainInterpState); //PyGILState_GetThisThreadState();
-    PyThreadState* pyState = PyGILState_GetThisThreadState();
-    PyFrameObject* frame = pyState->frame;
-    while (frame) {
-        PyObject* fileNameObj = frame->f_code->co_filename;
-        PyObject* funcNameObj = frame->f_code->co_name;
-        const char* fileNameStr = PyObj2Str(fileNameObj);
-        const char* funcNameStr = PyObj2Str(funcNameObj);
-        int lineNumber = PyFrame_GetLineNumber(frame);
-        std::string lineContent = GetPyLine(fileNameStr, lineNumber);
-        // DEBUG_LOG("[py back trace] fileName: %s, funcName:%s, lineNumber:%d, lineContent:%s\n", fileNameStr, funcNameStr, lineNumber, lineContent.c_str());
-        pyFrameQueue.push(UNWValue(fileNameStr, std::string(funcNameStr) + "::" + lineContent, lineNumber));
-        frame = frame->f_back;
-    }
+  // DEBUG_LOG("[py back trace] entered\n");
+  PyInterpreterState* mainInterpState = PyInterpreterState_Main();
+  //PyThreadState* pyState = PyInterpreterState_ThreadHead(mainInterpState); //PyGILState_GetThisThreadState();
+  PyThreadState* pyState = PyGILState_GetThisThreadState();
+  PyFrameObject* frame = pyState->frame;
+  while (frame) {
+    PyObject* fileNameObj = frame->f_code->co_filename;
+    PyObject* funcNameObj = frame->f_code->co_name;
+    const char* fileNameStr = PyObj2Str(fileNameObj);
+    const char* funcNameStr = PyObj2Str(funcNameObj);
+    int lineNumber = PyFrame_GetLineNumber(frame);
+    std::string lineContent = GetPyLine(fileNameStr, lineNumber);
+    // DEBUG_LOG("[py back trace] fileName: %s, funcName:%s, lineNumber:%d, lineContent:%s\n", fileNameStr, funcNameStr, lineNumber, lineContent.c_str());
+    pyFrameQueue.push(UNWValue(fileNameStr, std::string(funcNameStr) + "::" + lineContent, lineNumber));
+    frame = frame->f_back;
+  }
 }
 
 void getRSP(uint64_t *rsp) {
-    __asm__ __volatile__ (
-        "mov %%rsp, %0"
-        :"=m"(*rsp)
-        ::"memory"
-    );
+  __asm__ __volatile__ (
+    "mov %%rsp, %0"
+    :"=m"(*rsp)
+    ::"memory"
+  );
 }
 
 namespace {
 
 void PrintCCTMap() {
-    for (auto itr: g_CPUCCTMap) {
-        itr.second->printTree();
-    }
+  for (auto itr: g_CPUCCTMap) {
+    itr.second->printTree();
+  }
 }
 
 /**
@@ -342,26 +342,27 @@ void DoBackTrace(bool verbose=false) {
   }
 }
 
+
 void CopyCPUCCT2ProtoCPUCCT(CPUCCT* cct, CPUCallingContextTree*& tree) {
-    if (!cct->root) return;
-    tree->set_rootid(cct->root->id);
-    tree->set_rootpc(cct->root->pc);
-    for (auto node: cct->nodeMap) {
-        CPUCallingContextNode protoNode;
-        protoNode.set_id(node.first);
-        protoNode.set_pc(node.second->pc);
-        protoNode.set_parentid(node.second->parentID);
-        protoNode.set_parentpc(node.second->parentPC);
-        protoNode.set_offset(node.second->offset);
-        protoNode.set_funcname(node.second->funcName);
-        for (auto id2child: node.second->id2ChildNodes) {
-            protoNode.add_childids(id2child.first);
-        }
-        for (auto pc2child: node.second->pc2ChildNodes) {
-            protoNode.add_childpcs(pc2child.first);
-        }
-        (*(tree->mutable_nodemap()))[node.second->id] = protoNode;
+  if (!cct->root) return;
+  tree->set_rootid(cct->root->id);
+  tree->set_rootpc(cct->root->pc);
+  for (auto node: cct->nodeMap) {
+    CPUCallingContextNode protoNode;
+    protoNode.set_id(node.first);
+    protoNode.set_pc(node.second->pc);
+    protoNode.set_parentid(node.second->parentID);
+    protoNode.set_parentpc(node.second->parentPC);
+    protoNode.set_offset(node.second->offset);
+    protoNode.set_funcname(node.second->funcName);
+    for (auto id2child: node.second->id2ChildNodes) {
+      protoNode.add_childids(id2child.first);
     }
+    for (auto pc2child: node.second->pc2ChildNodes) {
+      protoNode.add_childpcs(pc2child.first);
+    }
+    (*(tree->mutable_nodemap()))[node.second->id] = protoNode;
+  }
 }
 
 CriticalNodeType IsCriticalNode(CPUCCTNode* node) {
@@ -479,30 +480,31 @@ void CopyCPUCCT2ProtoCPUCCTV2(GPUProfilingResponse* reply) {
 }
 
 void StorePCSamplesParents(CUpti_PCSamplingData* pPcSamplingData) {
-    for (int i = 0; i < pPcSamplingData->totalNumPcs; ++i) {
-        CUpti_PCSamplingPCData* pPcData = &pPcSamplingData->pPcData[i];
-        g_GPUPCSamplesParentCPUPCIDs[pPcData] = g_activeCPUPCID;
-    }
+  for (int i = 0; i < pPcSamplingData->totalNumPcs; ++i) {
+    CUpti_PCSamplingPCData* pPcData = &pPcSamplingData->pPcData[i];
+    g_GPUPCSamplesParentCPUPCIDs[pPcData] = g_activeCPUPCID;
+  }
 }
 
-void GetPcSamplingDataFromCupti(CUpti_PCSamplingGetDataParams &pcSamplingGetDataParams, ContextInfo *contextInfo)
-{
-    CUpti_PCSamplingData *pPcSamplingData = NULL;
+void GetPcSamplingDataFromCupti(
+    CUpti_PCSamplingGetDataParams &pcSamplingGetDataParams,
+    ContextInfo *contextInfo) {
+  CUpti_PCSamplingData *pPcSamplingData = NULL;
 
-    g_circularBufferMutex.lock();
-    while (g_bufferEmptyTrackerArray[g_put])
-    {
-        g_buffersGetUtilisedFasterThanStore = true;
-    }
+  // Time-consuming part.
+  g_circularBufferMutex.lock();
+  while (g_bufferEmptyTrackerArray[g_put]) {
+    g_buffersGetUtilisedFasterThanStore = true;
+  }
 
-    pcSamplingGetDataParams.pcSamplingData = (void *)&g_circularBuffer[g_put];
-    pPcSamplingData = &g_circularBuffer[g_put];
+  pcSamplingGetDataParams.pcSamplingData = (void *)&g_circularBuffer[g_put];
+  pPcSamplingData = &g_circularBuffer[g_put];
 
-    g_bufferEmptyTrackerArray[g_put] = true;
-    g_put = (g_put+1) % GetProfilerConf()->circularbufCount;
-    g_circularBufferMutex.unlock();
+  g_bufferEmptyTrackerArray[g_put] = true;
+  g_put = (g_put+1) % GetProfilerConf()->circularbufCount;
+  g_circularBufferMutex.unlock();
 
-    CUPTI_CALL(cuptiPCSamplingGetData(&pcSamplingGetDataParams));
+  CUPTI_CALL(cuptiPCSamplingGetData(&pcSamplingGetDataParams));
 
     g_pcSampDataQueueMutex.lock();
     g_pcSampDataQueue.push(std::make_pair(pPcSamplingData, contextInfo));
@@ -1337,12 +1339,14 @@ void stopPCThreadSyncHandler(int signum) {
     }
 }
 
+// 
 void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbose=false) {
-    pthread_t tid = g_pidt2pthreadt[pid];
-    // maintaining a seperate CCT for each CPU thread
-    if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
-        DEBUG_LOG("new CCT, tid=%d\n", pid);
-        CPUCCT* newCCT = new CPUCCT();
+  pthread_t tid = g_pidt2pthreadt[pid];
+
+  // Maintain a seperate CCT for each CPU thread.
+  if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
+    DEBUG_LOG("new CCT, tid=%d\n", pid);
+    CPUCCT* newCCT = new CPUCCT();
         // set a virtual root node of the new added CCT
         CPUCCTNode* vRootNode = new CPUCCTNode();
 
@@ -1358,7 +1362,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
 
         newCCT->setRootNode(vRootNode);
         g_CPUCCTMap.insert(std::make_pair(tid, newCCT));
-    }
+  }
 
     CPUCCT* cpuCCT = g_CPUCCTMap[tid];
 
@@ -1418,6 +1422,7 @@ void UpdateCCT(pid_t pid, CPUCallStackSampler::CallStack& callStack, bool verbos
     }
 }
 
+// Done by the newly launched thread, not application threads.
 void CollectCPUSamplerData() {
   while (g_cpuSamplerCollection->IsRunning()) {
     auto tid2CallStack = g_cpuSamplerCollection->CollectData();
@@ -1535,10 +1540,12 @@ class GPUProfilingServiceImpl final: public GPUProfilingService::Service {
         reply->set_message("pc sampling completed");
         rpcTimer->stop();
         DEBUG_LOG("requested duration=%lf, actual processing duration=%lf\n", request->duration() / 1000.0, rpcTimer->getAccumulatedTime());
+        
         Timer* genCallStackTimer = Timer::GetGlobalTimer("gen_call_stack");
         DEBUG_LOG("gen callstack overhead: %lf\n", genCallStackTimer->getAccumulatedTime());
         Timer* getProcTimer = Timer::GetGlobalTimer("unwinding_get_proc_name");
         DEBUG_LOG("unwind get proc timer: %lf\n", getProcTimer->getAccumulatedTime());
+        
         return Status::OK;
     }
 };
@@ -1589,10 +1596,10 @@ extern "C" int InitializeInjection(void) {
     g_tracingStarted = true;
     g_reply = new GPUProfilingResponse();
     if (!GetProfilerConf()->noSampling) {
-        g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
+      g_rpcReplyCopyThreadHandle = std::thread(RPCCopyPCSamplingData, g_reply);
     }
     if (GetProfilerConf()->enableCPUSampling) {
-        g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
+      g_cpuSamplerThreadHandle = std::thread(CollectCPUSamplerData);
     }
   } else {
     g_rpcServerThreadHandle = std::thread(RunServer);
