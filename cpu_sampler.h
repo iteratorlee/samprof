@@ -16,7 +16,6 @@
 
 class CPUCallStackSampler {
 public:
-
     struct CallStack {
         uint64_t time;
         uint32_t pid, tid;

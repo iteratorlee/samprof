@@ -1133,7 +1133,7 @@ void CallbackHandler(void* userdata, CUpti_CallbackDomain domain,
 namespace {
 
 void RPCCopyTracingData(GPUProfilingResponse* reply) {
-    DEBUG_LOG("rpc copy started [tracing]\n");
+    DEBUG_LOG("RPC copy started [tracing]\n");
 
     gpuprofiling::CUptiPCSamplingData* pcSampDataProto = reply->add_pcsamplingdata();
 
