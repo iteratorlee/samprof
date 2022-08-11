@@ -196,135 +196,150 @@ do {                                                            \
     else s2.pop();                                              \
 } while (0)
 
+// TODO(lpc): Complicated function. Dont understand yet.
+// Maintain a CPU CCT for each thread.
 void DoBackTrace(bool verbose=false) {
-    // maintaining a cpu cct for each thread
-    pthread_t tid = pthread_self();
-    if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
-        DEBUG_LOG("new CCT, tid=%d\n", gettid());
-        CPUCCT* newCCT = new CPUCCT();
-        // set a virtual root node of the new added CCT
-        CPUCCTNode* vRootNode = new CPUCCTNode();
+  pthread_t tid = pthread_self();
+  if (g_CPUCCTMap.find(tid) == g_CPUCCTMap.end()) {
+    //TODO(lpc): need to comm. with yan about the difference between gettid and tid here.
+    DEBUG_LOG("new CCT, tid=%d\n", gettid());
 
-        g_CPUCCTNodeIdMutex.lock();
-        vRootNode->id = g_CPUCCTNodeId;
-        ++g_CPUCCTNodeId;
-        g_CPUCCTNodeIdMutex.unlock();
+    CPUCCT* newCCT = new CPUCCT();
+    // Set a virtual root node.
+    CPUCCTNode* vRootNode = new CPUCCTNode();
 
-        vRootNode->funcName = "thread:" + std::to_string(gettid()) + "::id:" + std::to_string(vRootNode->id);
-        vRootNode->pc = 0;
-        vRootNode->offset = 0;
-        vRootNode->nodeType = CCTNODE_TYPE_CXX;
+    // TODO(lpc): can be improved with atomic.
+    g_CPUCCTNodeIdMutex.lock();
+    vRootNode->id = g_CPUCCTNodeId;
+    ++g_CPUCCTNodeId;
+    g_CPUCCTNodeIdMutex.unlock();
 
-        newCCT->setRootNode(vRootNode);
-        g_CPUCCTMap.insert(std::make_pair(tid, newCCT));
+    vRootNode->funcName = "thread:" + std::to_string(gettid()) + 
+                            "::id:" + std::to_string(vRootNode->id);
+    vRootNode->pc = 0;
+    vRootNode->offset = 0;
+    vRootNode->nodeType = CCTNODE_TYPE_CXX;
+
+    newCCT->setRootNode(vRootNode);
+    g_CPUCCTMap.insert({tid, newCCT});
+  }
+
+  CPUCCT* cpuCCT = g_CPUCCTMap[tid];
+
+  // If GetProfilerConf()->fakeBT is true, do not perform cpu 
+  // call stack unwinding. 
+  if (GetProfilerConf()->fakeBT) {
+    g_activeCPUPCIDMutex.lock();
+    if (verbose) {
+      DEBUG_LOG("active PC changed to %lu:%p\n", 
+                cpuCCT->root->id, (void *)(cpuCCT->root->pc));
     }
+    g_activeCPUPCID = cpuCCT->root->id;
+    g_activeCPUPCIDMutex.unlock();
+    return;
+  }
 
-    CPUCCT* cpuCCT = g_CPUCCTMap[tid];
+  // Optimization of cpu call stack unwinding: check the rsp register first.
+  uint64_t rsp;
+  getRSP(&rsp);
+  if (verbose) DEBUG_LOG("rsp=%p\n", (void *)rsp);
+  if (GetProfilerConf()->checkRSP && g_esp2pcIdMap.find(rsp) != g_esp2pcIdMap.end()) {
+    uint64_t pcId = g_esp2pcIdMap[rsp];
+    g_activeCPUPCIDMutex.lock();
+    g_activeCPUPCID = pcId;
+    g_activeCPUPCIDMutex.unlock();
+    if (verbose) DEBUG_LOG("already unwound, active pc id changed to %lu\n", pcId);
+    return;
+  }
 
-    // if GetProfilerConf()->fakeBT is true, do not perform cpu call stack unwinding
-    if (GetProfilerConf()->fakeBT) {
-        g_activeCPUPCIDMutex.lock();
-        if (verbose) DEBUG_LOG("active pc changed to %lu:%p\n", cpuCCT->root->id, (void *)(cpuCCT->root->pc));
-        g_activeCPUPCID = cpuCCT->root->id;
-        g_activeCPUPCIDMutex.unlock();
-        return;
+  // nodes to be inserted to the cpu calling context tree
+  std::stack<UNWValue> toInsertUNW;
+  std::stack<UNWValue> toInsertUNWMain;
+
+  auto status = GenerateCallStacks(toInsertUNW, verbose);
+
+  // TODO(lpc): don't understand this part yet.
+  // if the backend is Pytorch, and current thread has not PyFrame
+  // go to the main thread for PyFrame
+  if (GetProfilerConf()->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
+    DEBUG_LOG("this thread has not PyFrame, going to the main thread\n");
+    g_genCallStack = true;
+    pthread_kill(GetProfilerConf()->mainThreadTid, SIGUSR1);
+    while (g_genCallStack)  { }
+    toInsertUNWMain = g_callStack;
+    // TODO: clear the stack or not ?
+    while (!g_callStack.empty()) {
+      g_callStack.pop();
     }
+  }
 
-    // optimization of cpu call stack unwinding: check the rsp register first
-    uint64_t rsp;
-    getRSP(&rsp);
-    if (verbose) DEBUG_LOG("rsp=%p\n", (void *)rsp);
-    if (GetProfilerConf()->checkRSP && g_esp2pcIdMap.find(rsp) != g_esp2pcIdMap.end()) {
-        uint64_t pcId = g_esp2pcIdMap[rsp];
-        g_activeCPUPCIDMutex.lock();
-        g_activeCPUPCID = pcId;
-        g_activeCPUPCIDMutex.unlock();
-        if (verbose) DEBUG_LOG("already unwound, active pc id changed to %lu\n", pcId);
-        return;
-    }
-
-    // nodes to be inserted to the cpu calling context tree
-    std::stack<UNWValue> toInsertUNW;
-    std::stack<UNWValue> toInsertUNWMain;
-
-    auto status = GenerateCallStacks(toInsertUNW, verbose);
-
-    // if the backend is Pytorch, and current thread has not PyFrame
-    // go to the main thread for PyFrame
-    if (GetProfilerConf()->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
-        DEBUG_LOG("this thread has not PyFrame, going to the main thread\n");
-        g_genCallStack = true;
-        pthread_kill(GetProfilerConf()->mainThreadTid, SIGUSR1);
-        while (g_genCallStack);
-        toInsertUNWMain = g_callStack;
-        // TODO: clear the stack or not ?
-        while (!g_callStack.empty()) g_callStack.pop();
-    }
-
-    CPUCCTNode* parentNode = cpuCCT->root;
-    while (!toInsertUNW.empty()) {
-        UNWValue value;
-        TOP2(toInsertUNWMain, toInsertUNW, value);
-        CPUCCTNode* childNode = parentNode->getChildbyPC(value.pc);
-        //TODO if finding a CXX node with _PyEval_EvalFrameDefault
-        //     replace it with PY node
-        if (childNode) {
-            if (childNode->nodeType == CCTNODE_TYPE_C2P) {
-                if (value.nodeType == CCTNODE_TYPE_PY) {
-                    childNode->nodeType = CCTNODE_TYPE_PY;
-                    childNode->funcName = value.funcName;
-                    DEBUG_LOG("py node renamed in unwinding: %s\n", value.funcName.c_str());
-                } else {
-                    DEBUG_LOG("wrong cct node type matching: %d/%d\n", childNode->nodeType, value.nodeType);
-                }
-            }
-            parentNode = childNode;
-            POP2(toInsertUNWMain, toInsertUNW);
+  CPUCCTNode* parentNode = cpuCCT->root;
+  while (!toInsertUNW.empty()) {
+    UNWValue value;
+    TOP2(toInsertUNWMain, toInsertUNW, value);
+    CPUCCTNode* childNode = parentNode->getChildbyPC(value.pc);
+    //TODO if finding a CXX node with _PyEval_EvalFrameDefault
+    //     replace it with PY node
+    if (childNode) {
+      if (childNode->nodeType == CCTNODE_TYPE_C2P) {
+        if (value.nodeType == CCTNODE_TYPE_PY) {
+          childNode->nodeType = CCTNODE_TYPE_PY;
+          childNode->funcName = value.funcName;
+          DEBUG_LOG("py node renamed in unwinding: %s\n", value.funcName.c_str());
         } else {
-            break;
+          DEBUG_LOG("wrong cct node type matching: %d/%d\n", childNode->nodeType, value.nodeType);
         }
+      }
+      parentNode = childNode;
+      POP2(toInsertUNWMain, toInsertUNW);
+    } else {
+      break;
+    }
+  }
+
+  // The call path has been searched before
+  if (toInsertUNW.empty()) {
+    g_activeCPUPCIDMutex.lock();
+    g_activeCPUPCID = parentNode->id;
+    if (verbose) DEBUG_LOG("old pc, active pc changed to %lu:%p\n", parentNode->id, (void *)(parentNode->pc));
+    g_activeCPUPCIDMutex.unlock();
+  }
+
+  // The call path has unsearched suffix
+  while (!toInsertUNW.empty()) {
+    UNWValue value;
+    TOP2(toInsertUNWMain, toInsertUNW, value);
+    CPUCCTNode* newNode = new CPUCCTNode(value.nodeType);
+
+    newNode->pc = value.pc;
+    newNode->offset = value.offset;
+
+    g_CPUCCTNodeIdMutex.lock();
+    newNode->id = g_CPUCCTNodeId;
+    ++g_CPUCCTNodeId;
+    g_CPUCCTNodeIdMutex.unlock();
+
+    if (value.nodeType == CCTNODE_TYPE_CXX) {
+      newNode->funcName = value.funcName;// + "_" + std::to_string(newNode->id);
+    } else {
+      // + "_" + std::to_string(newNode->id)
+      newNode->funcName = value.fileName + "::" + value.funcName + 
+                          "_" + std::to_string(value.offset); 
     }
 
-    // the call path has been searched before
-    if (toInsertUNW.empty()) {
-        g_activeCPUPCIDMutex.lock();
-        g_activeCPUPCID = parentNode->id;
-        if (verbose) DEBUG_LOG("old pc, active pc changed to %lu:%p\n", parentNode->id, (void *)(parentNode->pc));
-        g_activeCPUPCIDMutex.unlock();
+    // leaf node
+    if (toInsertUNW.size() == 1) {
+      g_activeCPUPCIDMutex.lock();
+      if (verbose) DEBUG_LOG("active pc changed to %lu:%p\n", newNode->id, (void *)(newNode->pc));
+      g_activeCPUPCID = newNode->id;
+      g_esp2pcIdMap[rsp] = newNode->id;
+      g_activeCPUPCIDMutex.unlock();
     }
 
-    // the call path has unsearched suffix
-    while (!toInsertUNW.empty()) {
-        UNWValue value;
-        TOP2(toInsertUNWMain, toInsertUNW, value);
-        CPUCCTNode* newNode = new CPUCCTNode(value.nodeType);
-
-        newNode->pc = value.pc;
-        newNode->offset = value.offset;
-        g_CPUCCTNodeIdMutex.lock();
-        newNode->id = g_CPUCCTNodeId;
-        ++g_CPUCCTNodeId;
-        g_CPUCCTNodeIdMutex.unlock();
-
-        if (value.nodeType == CCTNODE_TYPE_CXX) {
-            newNode->funcName = value.funcName;// + "_" + std::to_string(newNode->id);
-        } else {
-            newNode->funcName = value.fileName + "::" + value.funcName + "_" + std::to_string(value.offset); // + "_" + std::to_string(newNode->id);
-        }
-
-        // leaf node
-        if (toInsertUNW.size() == 1) {
-            g_activeCPUPCIDMutex.lock();
-            if (verbose) DEBUG_LOG("active pc changed to %lu:%p\n", newNode->id, (void *)(newNode->pc));
-            g_activeCPUPCID = newNode->id;
-            g_esp2pcIdMap[rsp] = newNode->id;
-            g_activeCPUPCIDMutex.unlock();
-        }
-
-        cpuCCT->insertNode(parentNode, newNode);
-        parentNode = newNode;
-        POP2(toInsertUNWMain, toInsertUNW);
-    }
+    cpuCCT->insertNode(parentNode, newNode);
+    parentNode = newNode;
+    POP2(toInsertUNWMain, toInsertUNW);
+  }
 }
 
 void CopyCPUCCT2ProtoCPUCCT(CPUCCT* cct, CPUCallingContextTree*& tree) {
