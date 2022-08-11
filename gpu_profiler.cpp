@@ -839,8 +839,120 @@ void ConfigureActivity(CUcontext cuCtx) {
       stallReasonConfig);
 }
 
-// forward declaration
-static void RPCCopyTracingData(GPUProfilingResponse *reply);
+namespace {
+
+void RPCCopyTracingData(GPUProfilingResponse *reply) {
+  DEBUG_LOG("RPC copy started [tracing]\n");
+
+  gpuprofiling::CUptiPCSamplingData *pcSampDataProto =
+      reply->add_pcsamplingdata();
+
+  pcSampDataProto->set_size(sizeof(CUpti_PCSamplingData));
+  pcSampDataProto->set_collectnumpcs(g_tracingRecords.size());
+  pcSampDataProto->set_totalsamples(g_tracingRecords.size());
+  pcSampDataProto->set_droppedsamples(0);
+  pcSampDataProto->set_totalnumpcs(g_tracingRecords.size());
+  pcSampDataProto->set_remainingnumpcs(0);
+  pcSampDataProto->set_rangeid(0);
+  pcSampDataProto->set_nonusrkernelstotalsamples(0);
+
+  for (auto itr : g_tracingRecords) {
+    std::string key = itr.first;
+    size_t pos = key.find("::");
+    if (pos == std::string::npos) {
+      DEBUG_LOG("bad format: %s\n", key.c_str());
+      continue;
+    }
+
+    uint64_t parentCPUPCID = std::stoul(key.substr(0, pos));
+    // std::string funcName = key.substr(pos + 2);
+
+    auto tRecord = itr.second;
+    auto pcDataProto = pcSampDataProto->add_ppcdata();
+    pcDataProto->set_size(sizeof(CUpti_PCSamplingPCData));
+    pcDataProto->set_functionname(tRecord->funcName);
+    pcDataProto->set_cubincrc(0);
+    pcDataProto->set_parentcpupcid(parentCPUPCID);
+    pcDataProto->set_cubincrc(0);
+    pcDataProto->set_pcoffset(0);
+    pcDataProto->set_functionindex(0);
+    pcDataProto->set_pad(0);
+    pcDataProto->set_stallreasoncount(1);
+    auto stallResProto = pcDataProto->add_stallreason();
+    stallResProto->set_pcsamplingstallreasonindex(28);
+    uint64_t duration =
+        tRecord->duration; //(uint64_t)(tRecord->duration * 100000000);
+    stallResProto->set_samples(duration);
+    // DEBUG_LOG("[in tracing copy] fn: %s, duration: %lu\n",
+    // tRecord->funcName.c_str(), duration);
+  }
+}
+
+void RPCCopyPCSamplingData(GPUProfilingResponse *reply) {
+  bool to_break = false;
+  DEBUG_LOG("rpc copy thread created [sampling]\n");
+  while (true) {
+    if (!g_pcSamplingStarted) {
+      DEBUG_LOG("pc sampling stopped, rpc copy about to quit\n");
+      to_break = true;
+    }
+    g_pcSampDataQueueMutex.lock();
+    while (!g_pcSampDataQueue.empty()) {
+      CUpti_PCSamplingData *pcSampData = g_pcSampDataQueue.front().first;
+      gpuprofiling::CUptiPCSamplingData *pcSampDataProto =
+          reply->add_pcsamplingdata();
+
+      pcSampDataProto->set_size(pcSampData->size);
+      pcSampDataProto->set_collectnumpcs(pcSampData->collectNumPcs);
+      pcSampDataProto->set_totalsamples(pcSampData->totalSamples);
+      pcSampDataProto->set_droppedsamples(pcSampData->droppedSamples);
+      pcSampDataProto->set_totalnumpcs(pcSampData->totalNumPcs);
+      pcSampDataProto->set_remainingnumpcs(pcSampData->remainingNumPcs);
+      pcSampDataProto->set_rangeid(pcSampData->rangeId);
+      // pcSampDataProto->set_nonusrkernelstotalsamples(pcSampData->nonUsrKernelsTotalSamples);
+      pcSampDataProto->set_nonusrkernelstotalsamples(0);
+
+      for (int i = 0; i < pcSampData->totalNumPcs; ++i) {
+        gpuprofiling::CUptiPCSamplingPCData *pcDataProto =
+            pcSampDataProto->add_ppcdata();
+        CUpti_PCSamplingPCData *pcData = &pcSampData->pPcData[i];
+        pcDataProto->set_size(pcData->size);
+        pcDataProto->set_cubincrc(pcData->cubinCrc);
+        pcDataProto->set_pcoffset(pcData->pcOffset);
+        pcDataProto->set_functionindex(pcData->functionIndex);
+        pcDataProto->set_pad(pcData->pad);
+        pcDataProto->set_functionname(std::string(pcData->functionName));
+        pcDataProto->set_stallreasoncount(pcData->stallReasonCount);
+        pcDataProto->set_parentcpupcid(g_GPUPCSamplesParentCPUPCIDs[pcData]);
+        for (int j = 0; j < pcData->stallReasonCount; ++j) {
+          gpuprofiling::PCSamplingStallReason *stallResProto =
+              pcDataProto->add_stallreason();
+          CUpti_PCSamplingStallReason stallRes = pcData->stallReason[j];
+          stallResProto->set_pcsamplingstallreasonindex(
+              stallRes.pcSamplingStallReasonIndex);
+          stallResProto->set_samples(stallRes.samples);
+        }
+      }
+
+      g_pcSampDataQueue.pop();
+      g_bufferEmptyTrackerArray[g_get] = false;
+      g_get = (g_get + 1) % GetProfilerConf()->circularbufCount;
+    }
+    g_pcSampDataQueueMutex.unlock();
+    if (to_break)
+      break;
+  }
+}
+
+inline bool checkSyncMap() {
+  for (auto ts : g_kernelThreadSyncedMap) {
+    if (!ts.second)
+      return false;
+  }
+  return true;
+}
+
+} // namespace
 
 void AtExitHandler() {
   // Check for any error occured while PC sampling.
@@ -1202,120 +1314,6 @@ void CallbackHandler(void *userdata, CUpti_CallbackDomain domain,
   }
 }
 
-namespace {
-
-void RPCCopyTracingData(GPUProfilingResponse *reply) {
-  DEBUG_LOG("RPC copy started [tracing]\n");
-
-  gpuprofiling::CUptiPCSamplingData *pcSampDataProto =
-      reply->add_pcsamplingdata();
-
-  pcSampDataProto->set_size(sizeof(CUpti_PCSamplingData));
-  pcSampDataProto->set_collectnumpcs(g_tracingRecords.size());
-  pcSampDataProto->set_totalsamples(g_tracingRecords.size());
-  pcSampDataProto->set_droppedsamples(0);
-  pcSampDataProto->set_totalnumpcs(g_tracingRecords.size());
-  pcSampDataProto->set_remainingnumpcs(0);
-  pcSampDataProto->set_rangeid(0);
-  pcSampDataProto->set_nonusrkernelstotalsamples(0);
-
-  for (auto itr : g_tracingRecords) {
-    std::string key = itr.first;
-    size_t pos = key.find("::");
-    if (pos == std::string::npos) {
-      DEBUG_LOG("bad format: %s\n", key.c_str());
-      continue;
-    }
-
-    uint64_t parentCPUPCID = std::stoul(key.substr(0, pos));
-    // std::string funcName = key.substr(pos + 2);
-
-    auto tRecord = itr.second;
-    auto pcDataProto = pcSampDataProto->add_ppcdata();
-    pcDataProto->set_size(sizeof(CUpti_PCSamplingPCData));
-    pcDataProto->set_functionname(tRecord->funcName);
-    pcDataProto->set_cubincrc(0);
-    pcDataProto->set_parentcpupcid(parentCPUPCID);
-    pcDataProto->set_cubincrc(0);
-    pcDataProto->set_pcoffset(0);
-    pcDataProto->set_functionindex(0);
-    pcDataProto->set_pad(0);
-    pcDataProto->set_stallreasoncount(1);
-    auto stallResProto = pcDataProto->add_stallreason();
-    stallResProto->set_pcsamplingstallreasonindex(28);
-    uint64_t duration =
-        tRecord->duration; //(uint64_t)(tRecord->duration * 100000000);
-    stallResProto->set_samples(duration);
-    // DEBUG_LOG("[in tracing copy] fn: %s, duration: %lu\n",
-    // tRecord->funcName.c_str(), duration);
-  }
-}
-
-void RPCCopyPCSamplingData(GPUProfilingResponse *reply) {
-  bool to_break = false;
-  DEBUG_LOG("rpc copy thread created [sampling]\n");
-  while (true) {
-    if (!g_pcSamplingStarted) {
-      DEBUG_LOG("pc sampling stopped, rpc copy about to quit\n");
-      to_break = true;
-    }
-    g_pcSampDataQueueMutex.lock();
-    while (!g_pcSampDataQueue.empty()) {
-      CUpti_PCSamplingData *pcSampData = g_pcSampDataQueue.front().first;
-      gpuprofiling::CUptiPCSamplingData *pcSampDataProto =
-          reply->add_pcsamplingdata();
-
-      pcSampDataProto->set_size(pcSampData->size);
-      pcSampDataProto->set_collectnumpcs(pcSampData->collectNumPcs);
-      pcSampDataProto->set_totalsamples(pcSampData->totalSamples);
-      pcSampDataProto->set_droppedsamples(pcSampData->droppedSamples);
-      pcSampDataProto->set_totalnumpcs(pcSampData->totalNumPcs);
-      pcSampDataProto->set_remainingnumpcs(pcSampData->remainingNumPcs);
-      pcSampDataProto->set_rangeid(pcSampData->rangeId);
-      // pcSampDataProto->set_nonusrkernelstotalsamples(pcSampData->nonUsrKernelsTotalSamples);
-      pcSampDataProto->set_nonusrkernelstotalsamples(0);
-
-      for (int i = 0; i < pcSampData->totalNumPcs; ++i) {
-        gpuprofiling::CUptiPCSamplingPCData *pcDataProto =
-            pcSampDataProto->add_ppcdata();
-        CUpti_PCSamplingPCData *pcData = &pcSampData->pPcData[i];
-        pcDataProto->set_size(pcData->size);
-        pcDataProto->set_cubincrc(pcData->cubinCrc);
-        pcDataProto->set_pcoffset(pcData->pcOffset);
-        pcDataProto->set_functionindex(pcData->functionIndex);
-        pcDataProto->set_pad(pcData->pad);
-        pcDataProto->set_functionname(std::string(pcData->functionName));
-        pcDataProto->set_stallreasoncount(pcData->stallReasonCount);
-        pcDataProto->set_parentcpupcid(g_GPUPCSamplesParentCPUPCIDs[pcData]);
-        for (int j = 0; j < pcData->stallReasonCount; ++j) {
-          gpuprofiling::PCSamplingStallReason *stallResProto =
-              pcDataProto->add_stallreason();
-          CUpti_PCSamplingStallReason stallRes = pcData->stallReason[j];
-          stallResProto->set_pcsamplingstallreasonindex(
-              stallRes.pcSamplingStallReasonIndex);
-          stallResProto->set_samples(stallRes.samples);
-        }
-      }
-
-      g_pcSampDataQueue.pop();
-      g_bufferEmptyTrackerArray[g_get] = false;
-      g_get = (g_get + 1) % GetProfilerConf()->circularbufCount;
-    }
-    g_pcSampDataQueueMutex.unlock();
-    if (to_break)
-      break;
-  }
-}
-
-inline bool checkSyncMap() {
-  for (auto ts : g_kernelThreadSyncedMap) {
-    if (!ts.second)
-      return false;
-  }
-  return true;
-}
-
-} // namespace
 
 void startCUptiPCSamplingHandler(int signum) {
   // start CUPTI pc sampling when receiving signal SIGUSR1
