@@ -1,9 +1,11 @@
 #pragma once
+
+#include <sys/time.h>
+#include <unordered_map>
+
 #include <cassert>
 #include <chrono>
 #include <string>
-#include <sys/time.h>
-#include <unordered_map>
 
 class Timer {
 public:
