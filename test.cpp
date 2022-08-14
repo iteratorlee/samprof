@@ -92,7 +92,7 @@ void TestCppStackPointer() {
 
 void TestCPUCallStackSampler() {
     if (mainPid < 0) std::cerr << "main pid not initialized" << std::endl;
-    auto cpuSampler = GetCPUCallStackSampler(mainPid);
+    auto cpuSampler = GetOrCreateCPUCallStackSampler(mainPid);
     cpuSampler->EnableSampling();
     while (samplingStarted) {
         CPUCallStackSampler::CallStack callStack;

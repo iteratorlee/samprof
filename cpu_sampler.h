@@ -1,11 +1,9 @@
-#ifndef __CPU_SAMPLER_INCLUDED__
-#define __CPU_SAMPLER_INCLUDED__
-#include <mutex>
-
+#pragma once
 #include <cxxabi.h>
 #include <linux/hw_breakpoint.h>
 #include <linux/perf_event.h>
 #include <memory.h>
+#include <mutex>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -24,20 +22,16 @@ public:
     std::vector<std::string> fnames;
   };
 
-  CPUCallStackSampler(const CPUCallStackSampler &) = delete;
-  CPUCallStackSampler &operator=(const CPUCallStackSampler) = delete;
-
+  explicit CPUCallStackSampler(pid_t pid, uint64_t period, uint64_t pages);
   ~CPUCallStackSampler();
 
-  // enable/disable sampler
   void EnableSampling();
   void DisableSampling();
-
   int CollectData(int32_t timeout, uint64_t maxDepth,
                   struct CallStack &callStack);
 
-  explicit CPUCallStackSampler(pid_t pid, uint64_t period, uint64_t pages);
-
+  CPUCallStackSampler(const CPUCallStackSampler &) = delete;
+  CPUCallStackSampler &operator=(const CPUCallStackSampler) = delete;
 private:
   int fd;
   void *mem;
@@ -45,15 +39,11 @@ private:
   uint64_t offset;
 };
 
-CPUCallStackSampler *GetCPUCallStackSampler(pid_t pid);
+CPUCallStackSampler *GetOrCreateCPUCallStackSampler(pid_t pid);
 
 class CPUCallStackSamplerCollection {
 public:
   CPUCallStackSamplerCollection(){};
-  CPUCallStackSamplerCollection(const CPUCallStackSamplerCollection &) = delete;
-  CPUCallStackSamplerCollection &
-  operator=(const CPUCallStackSamplerCollection) = delete;
-
   ~CPUCallStackSamplerCollection();
 
   void RegisterSampler(pid_t pid);
@@ -64,6 +54,9 @@ public:
 
   std::unordered_map<pid_t, CPUCallStackSampler::CallStack> CollectData();
 
+  CPUCallStackSamplerCollection(const CPUCallStackSamplerCollection &) = delete;
+  CPUCallStackSamplerCollection &
+  operator=(const CPUCallStackSamplerCollection) = delete;
 private:
   std::unordered_map<pid_t, CPUCallStackSampler *> samplers;
   bool running;
@@ -89,5 +82,3 @@ static std::string ParseBTSymbol(std::string rawStr) {
   }
   return s;
 }
-
-#endif
