@@ -1,3 +1,4 @@
+#define UNW_LOCAL_ONLY
 #pragma once
 
 #include <mutex>
@@ -12,7 +13,6 @@
 #include "cpu_sampler.h"
 #include "utils.h"
 
-#define UNW_LOCAL_ONLY
 
 typedef struct unwvalue {
   unw_word_t pc;
