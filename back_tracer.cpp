@@ -4,15 +4,11 @@ void getRSP(uint64_t *rsp) {
   __asm__ __volatile__("mov %%rsp, %0" : "=m"(*rsp)::"memory");
 }
 
-BackTracer::BackTracer(ProfilerConf *_profilerConf) {
-  profilerConf = _profilerConf;
-}
-
 CallStackStatus BackTracer::GenerateCallStack(std::stack<UNWValue> &q,
                                          bool verbose /*=false*/) {
   std::queue<UNWValue> pyFrameQueue;
   CallStackStatus status;
-  if (profilerConf->doPyUnwinding)
+  if (GetProfilerConf()->doPyUnwinding)
     pyBackTrace(pyFrameQueue);
   if (pyFrameQueue.size())
     status = CALL_STACK_HAS_PY;
@@ -42,7 +38,7 @@ CallStackStatus BackTracer::GenerateCallStack(std::stack<UNWValue> &q,
     if (HasExcludePatterns(outer_name))
       continue;
 
-    if (profilerConf->doPyUnwinding &&
+    if (GetProfilerConf()->doPyUnwinding &&
         std::string(outer_name).find("_PyEval_EvalFrameDefault") !=
             std::string::npos) {
       UNWValue value = pyFrameQueue.front();
@@ -66,8 +62,9 @@ void BackTracer::DoBackTrace(bool verbose) {
   Timer *timer = Timer::GetGlobalTimer("back_tracer");
   timer->start();
 #endif
+  auto CPUCCTMap = GetCPUCCTMap();
   pthread_t tid = pthread_self();
-  if (CPUCCTMap.find(tid) == CPUCCTMap.end()) {
+  if (CPUCCTMap->find(tid) == CPUCCTMap->end()) {
     DEBUG_LOG("new CCT, tid=%d\n", gettid());
     CPUCCT *newCCT = new CPUCCT();
     CPUCCTNode *vRootNode = new CPUCCTNode();
@@ -84,10 +81,10 @@ void BackTracer::DoBackTrace(bool verbose) {
     vRootNode->nodeType = CCTNODE_TYPE_CXX;
 
     newCCT->setRootNode(vRootNode);
-    CPUCCTMap.insert(std::make_pair(tid, newCCT));
+    CPUCCTMap->insert({tid, newCCT});
   }
 
-  CPUCCT *cpuCCT = CPUCCTMap[tid];
+  CPUCCT *cpuCCT = CPUCCTMap->at(tid);
 
   // If GetProfilerConf()->fakeBT is true, do not perform cpu
   // call stack unwinding.
@@ -107,7 +104,8 @@ void BackTracer::DoBackTrace(bool verbose) {
   getRSP(&rsp);
   if (verbose)
     DEBUG_LOG("rsp=%p\n", (void *)rsp);
-  if (profilerConf->checkRSP && esp2pcIdMap.find(rsp) != esp2pcIdMap.end()) {
+  if (GetProfilerConf()->checkRSP && 
+      esp2pcIdMap.find(rsp) != esp2pcIdMap.end()) {
     uint64_t pcId = esp2pcIdMap[rsp];
     activeCPUPCIDMutex.lock();
     activeCPUPCID = pcId;
@@ -124,10 +122,10 @@ void BackTracer::DoBackTrace(bool verbose) {
 
   // if the backend is Pytorch, and current thread has not PyFrame
   // go to the main thread for PyFrame
-  if (profilerConf->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
+  if (GetProfilerConf()->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
     DEBUG_LOG("this thread has not PyFrame, going to the main thread\n");
     handlingRemoteUnwinding = true;
-    pthread_kill(profilerConf->mainThreadTid, SIGUSR1);
+    pthread_kill(GetProfilerConf()->mainThreadTid, SIGUSR1);
     while (handlingRemoteUnwinding) {
     }
     toInsertUNWMain = g_callStack;
@@ -218,7 +216,7 @@ void BackTracer::DoBackTrace(bool verbose) {
 }
 
 BackTracer *BackTracer::GetBackTracerSingleton() {
-  static auto singleton = new BackTracer(GetProfilerConf());
+  static auto singleton = new BackTracer();
   return singleton;
 }
 

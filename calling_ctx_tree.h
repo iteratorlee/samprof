@@ -125,6 +125,10 @@ public:
 };
 
 typedef std::unordered_map<pthread_t, CPUCCT *> CCTMAP_t;
+static CCTMAP_t *GetCPUCCTMap() {
+  static CCTMAP_t *CPUCCTMap = new CCTMAP_t();
+  return CPUCCTMap;
+}
 
 static bool HasExcludePatterns(std::string funcName) {
   std::vector<std::string> excludePatterns = {

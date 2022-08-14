@@ -89,6 +89,7 @@ static void pyBackTrace(std::queue<UNWValue> &pyFrameQueue) {
 
 class BackTracer {
 public:
+  BackTracer() {};
   BackTracer(const BackTracer &) = delete;
   BackTracer &operator=(const BackTracer) = delete;
 
@@ -104,14 +105,8 @@ public:
   bool handlingRemoteUnwinding;
   std::stack<UNWValue> g_callStack;
 
-protected:
-  explicit BackTracer(ProfilerConf *_profilerConf);
-
 private:
-  ProfilerConf *profilerConf;
-
   std::unordered_map<uint64_t, uint64_t> esp2pcIdMap;
-  CCTMAP_t CPUCCTMap;
 
   std::recursive_mutex activeCPUPCIDMutex;
   unw_word_t activeCPUPCID;
