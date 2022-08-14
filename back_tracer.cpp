@@ -8,7 +8,7 @@ BackTracer::BackTracer(ProfilerConf *_profilerConf) {
   profilerConf = _profilerConf;
 }
 
-CallStackStatus BackTracer::GenCallStack(std::stack<UNWValue> &q,
+CallStackStatus BackTracer::GenerateCallStack(std::stack<UNWValue> &q,
                                          bool verbose /*=false*/) {
   std::queue<UNWValue> pyFrameQueue;
   CallStackStatus status;
@@ -82,7 +82,7 @@ void BackTracer::DoBackTrace(bool verbose) {
   std::stack<UNWValue> toInsertUNW;
   std::stack<UNWValue> toInsertUNWMain;
 
-  auto status = GenCallStack(toInsertUNW, verbose);
+  auto status = GenerateCallStack(toInsertUNW, verbose);
   if (profilerConf->doPyUnwinding && status == CALL_STACK_NOT_HAS_PY) {
     DEBUG_LOG("this thread has not PyFrame, going to the main thread\n");
     handlingRemoteUnwinding = true;

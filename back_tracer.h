@@ -93,7 +93,7 @@ public:
   BackTracer &operator=(const BackTracer) = delete;
 
   static BackTracer *GetBackTracerSingleton();
-  CallStackStatus GenCallStack(std::stack<UNWValue> &q, bool verbose = false);
+  CallStackStatus GenerateCallStack(std::stack<UNWValue> &q, bool verbose = false);
   void DoBackTrace(bool verbose);
 
   void SetCorId2ActivePCID(uint32_t corId) {

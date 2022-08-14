@@ -297,7 +297,7 @@ void DoBackTrace(bool verbose = false) {
     UNWValue value;
     TOP2(toInsertUNWMain, toInsertUNW, value);
     CPUCCTNode *childNode = parentNode->getChildbyPC(value.pc);
-    // TODO if finding a CXX node with _PyEval_EvalFrameDefault
+    // if finding a CXX node with _PyEval_EvalFrameDefault (C2P node)
     //     replace it with PY node
     if (childNode) {
       if (childNode->nodeType == CCTNODE_TYPE_C2P) {
